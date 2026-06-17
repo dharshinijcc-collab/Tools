@@ -422,6 +422,12 @@ export default function ScoringWidget() {
             overallScore={result.overall_score}
             triageBand={result.triage_band as TriageBand}
             ideaText={answers['idea_text'] || ''}
+            startupSummary={result.startup_summary}
+            keyStrengths={result.key_strengths}
+            topRisks={result.top_risks}
+            highestScoringDimension={result.highest_scoring_dimension}
+            lowestScoringDimension={result.lowest_scoring_dimension}
+            mostImportantNextAction={result.most_important_next_action}
           />
 
           <DimensionList dimensions={result.dimensions} unlocked={true} />

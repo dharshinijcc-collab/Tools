@@ -1,22 +1,111 @@
 import { z } from 'zod';
 
-// ── Dimension detail schema ──────────────────────────────────────────────────
+// ── Extracted Signals (AI Pass 1) ─────────────────────────────────────────────
+// Flat signal object extracted by AI from the startup idea text.
+// These are categorical/boolean values — AI never assigns scores directly.
+
+export interface ExtractedSignals {
+  // Market / Business
+  market_size: 'large' | 'medium' | 'small' | 'unknown';
+  revenue_model: 'subscription' | 'usage_based' | 'one_time' | 'marketplace' | 'freemium' | 'unknown';
+  growth_potential: 'high' | 'medium' | 'low' | 'unknown';
+  scalability: 'high' | 'moderate' | 'low' | 'unknown';
+  exit_potential: 'high' | 'medium' | 'low' | 'unknown';
+  investor_interest_in_space: 'high' | 'medium' | 'low' | 'unknown';
+
+  // Customer Demand
+  pain_severity: 'severe' | 'moderate' | 'mild' | 'unknown';
+  problem_frequency: 'daily' | 'weekly' | 'occasional' | 'rare' | 'unknown';
+  existing_buyers: boolean;
+  clear_roi: boolean;
+  nice_to_have: boolean;
+  willingness_to_pay: 'high' | 'medium' | 'low' | 'unknown';
+
+  // Market Timing
+  industry_growth: 'fast' | 'moderate' | 'slow' | 'declining' | 'unknown';
+  technology_maturity: 'ready' | 'emerging' | 'not_ready' | 'unknown';
+  consumer_adoption: 'growing' | 'early' | 'mass_market' | 'unknown';
+  regulatory_environment: 'supportive' | 'neutral' | 'restrictive' | 'unknown';
+  too_early: boolean;
+
+  // Technical Feasibility
+  existing_apis_available: boolean;
+  mvp_complexity: 'simple' | 'moderate' | 'complex' | 'research_required' | 'unknown';
+  requires_new_hardware: boolean;
+  ai_dependency: 'core' | 'supporting' | 'none' | 'unknown';
+  infrastructure_complexity: 'low' | 'medium' | 'high' | 'unknown';
+
+  // Competitive Moat
+  has_proprietary_data: boolean;
+  has_network_effects: boolean;
+  switching_costs: 'high' | 'medium' | 'low' | 'unknown';
+  differentiation: 'strong' | 'moderate' | 'weak' | 'unknown';
+  competition_level: 'low' | 'medium' | 'high' | 'very_high' | 'unknown';
+  easy_to_copy: boolean;
+
+  // Founder-Market Fit
+  domain_expertise: 'expert' | 'experienced' | 'learning' | 'none' | 'unknown';
+  technical_background: boolean;
+  industry_experience: 'deep' | 'some' | 'none' | 'unknown';
+  execution_track_record: 'strong' | 'some' | 'none' | 'unknown';
+  credibility: 'high' | 'medium' | 'low' | 'unknown';
+}
+
+// ── Scoring Factor (Rule Engine output per factor) ────────────────────────────
+// Represents a single factor in the rule table that was evaluated.
+
+export interface ScoringFactor {
+  label: string;           // Human-readable factor name e.g. "Large Addressable Market"
+  points: number;          // Points contributed (+2, -1 etc.)
+  detected: boolean;       // Whether this factor was triggered for this idea
+  signal_key: string;      // Which signal triggered this (for debugging)
+}
+
+// ── Dimension Rule Result (output of rule engine for one dimension) ────────────
+
+export interface DimensionRuleResult {
+  score: number;                     // 0–10 computed from rule table
+  confidence: number;                // 0–100 based on signals available
+  factors: ScoringFactor[];          // All factors evaluated (detected + not)
+  active_factors: ScoringFactor[];   // Only factors that fired (detected=true)
+  positive_signals: string[];        // Labels of positive factors that fired
+  negative_signals: string[];        // Labels of negative factors that fired
+}
+
+// ── Dimension detail schema ───────────────────────────────────────────────────
+// This is the full DimensionDetail shape stored in DB and returned from API.
+// scoring_factors contains the rule-engine breakdown for the "How We Calculated This" UI.
 
 export const DimensionDetailSchema = z.object({
   score: z.number().min(0).max(10),
-  teaser: z.string(),
-  reason: z.string(),
-  risk: z.string(),
-  recommendation: z.string(),
+  confidence: z.number().min(0).max(100),
+  evaluation_criteria: z.array(z.string()),
+  why_this_score: z.string(),
+  positive_signals: z.array(z.string()),
+  negative_signals: z.array(z.string()),
+  improvement_actions: z.array(z.string()),
+  scoring_factors: z.array(z.object({
+    label: z.string(),
+    points: z.number(),
+    detected: z.boolean(),
+    signal_key: z.string(),
+  })).optional(),
 });
 
 export type DimensionDetail = z.infer<typeof DimensionDetailSchema>;
 
-// ── Full AI response schema ──────────────────────────────────────────────────
+// ── Full AI response schema ───────────────────────────────────────────────────
 
 export const ScoringResponseSchema = z.object({
   overall_score: z.number().min(0).max(10),
   triage_band: z.enum(['Strong Pass', 'Promising / Needs Work', 'Not a Fit (Currently)']),
+  confidence_level: z.number().min(0).max(100),
+  startup_summary: z.string(),
+  key_strengths: z.array(z.string()),
+  top_risks: z.array(z.string()),
+  highest_scoring_dimension: z.string(),
+  lowest_scoring_dimension: z.string(),
+  most_important_next_action: z.string(),
   dimensions: z.object({
     investor_appeal: DimensionDetailSchema,
     customer_demand: DimensionDetailSchema,
@@ -29,7 +118,7 @@ export const ScoringResponseSchema = z.object({
 
 export type ScoringResponse = z.infer<typeof ScoringResponseSchema>;
 
-// ── Dimension metadata (display labels + weights) ────────────────────────────
+// ── Dimension metadata (display labels + weights) ─────────────────────────────
 
 export const DIMENSION_META = [
   { key: 'investor_appeal',       label: 'Investor Appeal',       weight: 0.20, icon: '💼' },
@@ -42,7 +131,7 @@ export const DIMENSION_META = [
 
 export type DimensionKey = typeof DIMENSION_META[number]['key'];
 
-// ── Triage band helpers ──────────────────────────────────────────────────────
+// ── Triage band helpers ───────────────────────────────────────────────────────
 
 export type TriageBand = ScoringResponse['triage_band'];
 
@@ -67,7 +156,7 @@ export const TRIAGE_CONFIG: Record<TriageBand, { color: string; bg: string; bord
   },
 };
 
-// ── Stored result type (from DB / API) ──────────────────────────────────────
+// ── Stored result type (from DB / API) ────────────────────────────────────────
 
 export interface StoredResult {
   id: string;
@@ -90,17 +179,24 @@ export interface ResultDetailResponse {
   created_at: string;
 }
 
-// ── API response shapes ──────────────────────────────────────────────────────
+// ── API response shapes ───────────────────────────────────────────────────────
 
 export interface ScoreApiResponse {
   id: string;
   overall_score: number;
   triage_band: TriageBand;
+  confidence_level: number;
+  startup_summary: string;
+  key_strengths: string[];
+  top_risks: string[];
+  highest_scoring_dimension: string;
+  lowest_scoring_dimension: string;
+  most_important_next_action: string;
   dimensions: ScoringResponse['dimensions'];
   unlocked: boolean;
 }
 
-// ── User plan types ──────────────────────────────────────────────────────────
+// ── User plan types ───────────────────────────────────────────────────────────
 
 export type Plan = 'free' | 'pro';
 

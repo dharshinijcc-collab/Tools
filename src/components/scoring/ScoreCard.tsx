@@ -8,9 +8,15 @@ interface ScoreCardProps {
   triageBand: TriageBand;
   ideaText?: string;
   compact?: boolean;
+  startupSummary?: string;
+  keyStrengths?: string[];
+  topRisks?: string[];
+  highestScoringDimension?: string;
+  lowestScoringDimension?: string;
+  mostImportantNextAction?: string;
 }
 
-export default function ScoreCard({ overallScore, triageBand, ideaText, compact = false }: ScoreCardProps) {
+export default function ScoreCard({ overallScore, triageBand, ideaText, compact = false, startupSummary, keyStrengths, topRisks, highestScoringDimension, lowestScoringDimension, mostImportantNextAction }: ScoreCardProps) {
   const config = TRIAGE_CONFIG[triageBand];
   const radius = compact ? 44 : 60;
   const strokeW = compact ? 7 : 9;
@@ -93,7 +99,7 @@ export default function ScoreCard({ overallScore, triageBand, ideaText, compact 
         {!compact && (
           <>
             <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
-              Overall Score
+              Overall Startup Assessment
             </h2>
             {ideaText && (
               <p style={{
@@ -103,6 +109,81 @@ export default function ScoreCard({ overallScore, triageBand, ideaText, compact 
               }}>
                 &quot;{ideaText}&quot;
               </p>
+            )}
+
+            {/* Startup Summary */}
+            {startupSummary && (
+              <div style={{ marginTop: 16, padding: '12px 16px', background: 'var(--primary-muted)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                <p style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5, margin: 0 }}>
+                  <strong style={{ color: 'var(--primary)' }}>Executive Summary:</strong> {startupSummary}
+                </p>
+              </div>
+            )}
+
+            {/* Key Strengths */}
+            {keyStrengths && keyStrengths.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Key Strengths
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6 }}>
+                  {keyStrengths.map((strength, i) => (
+                    <li key={i} style={{ marginBottom: 4 }}>{strength}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Top Risks */}
+            {topRisks && topRisks.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Top Risks
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  {topRisks.map((risk, i) => (
+                    <li key={i} style={{ marginBottom: 4 }}>{risk}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Dimension Highlights */}
+            {(highestScoringDimension || lowestScoringDimension) && (
+              <div style={{ marginTop: 16, display: 'flex', gap: 16 }}>
+                {highestScoringDimension && (
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Highest Scoring
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--score-green)' }}>
+                      {highestScoringDimension}
+                    </div>
+                  </div>
+                )}
+                {lowestScoringDimension && (
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Lowest Scoring
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--score-red)' }}>
+                      {lowestScoringDimension}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Most Important Next Action */}
+            {mostImportantNextAction && (
+              <div style={{ marginTop: 16, padding: '12px 16px', background: 'linear-gradient(135deg, #FFF8E1 0%, #FFECB3 100%)', borderRadius: 8, border: '1px solid #FFE082' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#E0A800', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Most Important Next Action
+                </div>
+                <p style={{ fontSize: 13, color: '#5D4037', lineHeight: 1.5, margin: 0, fontWeight: 500 }}>
+                  {mostImportantNextAction}
+                </p>
+              </div>
             )}
           </>
         )}

@@ -8,6 +8,13 @@ export default function SkeletonResult() {
           <div className="skeleton" style={{ height: 22, width: '50%' }} />
           <div className="skeleton" style={{ height: 16, width: '70%' }} />
           <div className="skeleton" style={{ height: 16, width: '40%' }} />
+          <div className="skeleton" style={{ height: 14, width: '30%' }} />
+          <div className="skeleton" style={{ height: 60, width: '100%' }} />
+          <div className="skeleton" style={{ height: 14, width: '25%' }} />
+          <div className="skeleton" style={{ height: 40, width: '80%' }} />
+          <div className="skeleton" style={{ height: 14, width: '20%' }} />
+          <div className="skeleton" style={{ height: 40, width: '75%' }} />
+          <div className="skeleton" style={{ height: 50, width: '100%' }} />
         </div>
       </div>
 
@@ -25,7 +32,23 @@ export default function SkeletonResult() {
             <div className="skeleton" style={{ width: 44, height: 44, borderRadius: '50%' }} />
           </div>
           <div className="skeleton" style={{ height: 6, width: '100%', borderRadius: 999 }} />
-          <div className="skeleton" style={{ height: 13, width: '80%' }} />
+          <div className="skeleton" style={{ height: 12, width: '25%' }} />
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <div className="skeleton" style={{ height: 24, width: 80, borderRadius: 999 }} />
+            <div className="skeleton" style={{ height: 24, width: 90, borderRadius: 999 }} />
+            <div className="skeleton" style={{ height: 24, width: 70, borderRadius: 999 }} />
+          </div>
+          <div className="skeleton" style={{ height: 12, width: '30%' }} />
+          <div className="skeleton" style={{ height: 40, width: '100%' }} />
+          <div className="skeleton" style={{ height: 12, width: '35%' }} />
+          <div className="skeleton" style={{ height: 20, width: '90%' }} />
+          <div className="skeleton" style={{ height: 20, width: '85%' }} />
+          <div className="skeleton" style={{ height: 12, width: '30%' }} />
+          <div className="skeleton" style={{ height: 20, width: '80%' }} />
+          <div className="skeleton" style={{ height: 20, width: '75%' }} />
+          <div className="skeleton" style={{ height: 12, width: '25%' }} />
+          <div className="skeleton" style={{ height: 20, width: '85%' }} />
+          <div className="skeleton" style={{ height: 20, width: '80%' }} />
         </div>
       ))}
     </div>

@@ -5,8 +5,8 @@ import { DIMENSION_META } from '@/types/scoring';
 
 const HOW_IT_WORKS = [
   { step: '1', title: 'Describe your idea', desc: 'Write a clear description of your startup idea — what it does, who it serves, and why now.' },
-  { step: '2', title: 'AI analyzes 6 dimensions', desc: 'Our GPT-4.1 Mini model evaluates investor appeal, customer demand, timing, feasibility, moat, and founder fit.' },
-  { step: '3', title: 'Get your score + breakdown', desc: 'See your weighted score, triage band, and actionable insights per dimension within seconds.' },
+  { step: '2', title: 'Investor-style due diligence', desc: 'Our AI performs investor-grade analysis across market demand, scalability, technical complexity, competition, timing, and founder readiness.' },
+  { step: '3', title: 'Get detailed investor report', desc: 'Receive a comprehensive report explaining how every score was calculated, what signals influenced it, and what improvements could significantly increase your startup\'s viability.' },
 ];
 
 export default function HomePage() {
@@ -51,8 +51,8 @@ export default function HomePage() {
               maxWidth: 560,
               margin: '0 auto 40px',
             }}>
-              Score your startup idea across 6 investor-grade dimensions in under 60 seconds. 
-              Get real analysis, not generic advice.
+              Get investor-grade due diligence on your startup idea in under 60 seconds. 
+              Receive detailed analysis explaining exactly how each score was calculated.
             </p>
 
             {/* Trust badges */}
