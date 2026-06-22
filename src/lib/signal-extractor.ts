@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai';
-import { ExtractedSignals } from '@/types/scoring';
+import { ExtractedSignals, QAAnswers } from '@/types/scoring';
 
 /**
  * AI PASS 1 — Signal Extraction
