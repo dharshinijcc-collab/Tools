@@ -135,7 +135,7 @@ export async function extractSignals(
   qa?: QAAnswers | null,
 ): Promise<ExtractedSignals> {
   const model = geminiClient.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-1.5-flash',
     generationConfig: {
       temperature: 0.1, // Low temperature for factual extraction
       responseMimeType: 'application/json',

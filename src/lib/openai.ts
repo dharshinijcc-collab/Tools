@@ -235,7 +235,7 @@ export async function generateNarrative(
   qa?: QAAnswers | null,
 ): Promise<NarrativeResponse> {
   const model = geminiClient.getGenerativeModel({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-1.5-flash',
     generationConfig: {
       temperature: 0.6, // Higher temp for richer prose
       responseMimeType: 'application/json',
