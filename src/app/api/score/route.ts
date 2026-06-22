@@ -6,21 +6,33 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { getGeminiClient, generateNarrative } from '@/lib/openai';
 import { extractSignals, countQAAnswered } from '@/lib/signal-extractor';
 import { runRuleEngine, computeOverallConfidence } from '@/lib/rule-engine';
-import { ScoringResponse } from '@/types/scoring';
+import { ScoringResponse, ExtractedSignals } from '@/types/scoring';
 import { generateMockResponse } from '@/lib/mock-data';
 import { mockDb } from '@/lib/mock-db';
-import { computeOverallScore, computeTriageBand } from '@/lib/score-calculator';
+import { computeOverallScore, computeTriageBand, computeStartupQualityScore, computeInvestorReadinessScore } from '@/lib/score-calculator';
+import { RuleEngineOutput } from '@/lib/rule-engine';
 
 const USE_MOCK_AI = process.env.USE_MOCK_AI === 'true' || !process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'placeholder-gemini-key';
 const USE_MOCK_DB = process.env.USE_MOCK_DB === 'true' || !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder');
 
 const QAAnswersSchema = z.object({
-  target_audience:    z.string().optional(),
-  problem_solved:     z.string().optional(),
-  revenue_model:      z.string().optional(),
-  competitors:        z.string().optional(),
-  founder_background: z.string().optional(),
-  current_stage:      z.string().optional(),
+  customer: z.string().optional(),
+  problem: z.string().optional(),
+  pain_score: z.number().optional(),
+  validation_level: z.enum(['none', 'conversations', 'waitlist', 'paying_customers']).optional(),
+  market_size_choice: z.enum(['small', 'medium', 'large', 'mass_market']).optional(),
+  revenue_model_choice: z.enum(['subscription', 'transaction_fee', 'marketplace', 'licensing', 'advertising', 'one_time', 'other']).optional(),
+  why_now: z.string().optional(),
+  competitors: z.string().optional(),
+  moat: z.string().optional(),
+  solo_founder: z.boolean().optional(),
+  has_technical_cofounder: z.boolean().optional(),
+  technical_background: z.enum(['can_code', 'used_to_code', 'no']).optional(),
+  current_stage: z.enum(['forming', 'ux_design', 'prototype', 'mvp']).optional(),
+  launch_timeline: z.string().optional(),
+  funding_status: z.enum(['bootstrapped', 'raising', 'raised']).optional(),
+  contact_name: z.string().optional(),
+  contact_email: z.string().optional(),
 }).optional();
 
 const RequestSchema = z.object({
@@ -84,39 +96,130 @@ export async function POST(req: NextRequest) {
 
     // ── Build AI response ─────────────────────────────────────────────────────
     let aiResponse: ScoringResponse;
+    let signals: ExtractedSignals;
+    let ruleResults: RuleEngineOutput;
 
     if (USE_MOCK_AI) {
       // Mock mode: simulate delay then return mock data with scoring_factors
       await new Promise((r) => setTimeout(r, 800));
       aiResponse = generateMockResponse(idea_text);
+      
+      // Seed mock values for signals & rule engine output so they can be saved to DB
+      signals = {
+        market_size: 'large',
+        revenue_model: 'subscription',
+        growth_potential: 'high',
+        scalability: 'high',
+        exit_potential: 'high',
+        investor_interest_in_space: 'high',
+        pain_severity: 'severe',
+        problem_frequency: 'daily',
+        existing_buyers: false,
+        clear_roi: true,
+        nice_to_have: false,
+        willingness_to_pay: 'high',
+        industry_growth: 'fast',
+        technology_maturity: 'ready',
+        consumer_adoption: 'growing',
+        regulatory_environment: 'supportive',
+        too_early: false,
+        existing_apis_available: true,
+        mvp_complexity: 'moderate',
+        requires_new_hardware: false,
+        ai_dependency: 'core',
+        infrastructure_complexity: 'medium',
+        has_proprietary_data: false,
+        has_network_effects: false,
+        switching_costs: 'medium',
+        differentiation: 'moderate',
+        competition_level: 'high',
+        easy_to_copy: false,
+        domain_expertise: 'experienced',
+        technical_background: true,
+        industry_experience: 'some',
+        execution_track_record: 'some',
+        credibility: 'medium',
+        moat_strength: 'moderate',
+        why_now_strength: 'strong',
+        validation_level: qa_answers?.validation_level || 'none',
+        pain_score: qa_answers?.pain_score || 7,
+        technical_background_choice: qa_answers?.technical_background || 'no',
+        founder_count: qa_answers?.solo_founder ? 'solo' : 'team',
+        has_technical_cofounder: qa_answers?.has_technical_cofounder || false,
+        funding_status: qa_answers?.funding_status || 'bootstrapped',
+        current_stage: qa_answers?.current_stage || 'forming',
+        market_size_choice: qa_answers?.market_size_choice || 'large',
+        revenue_model_choice: qa_answers?.revenue_model_choice || 'subscription',
+      };
+      ruleResults = runRuleEngine(signals);
     } else {
       // ── HYBRID TWO-PASS ARCHITECTURE ─────────────────────────────────────
       const gemini = getGeminiClient();
 
+      // We compile our frontend answers block and merge it in
+      const fullQaAnswers = qa_answers ? {
+        customer: qa_answers.customer || '',
+        problem: qa_answers.problem || '',
+        pain_score: qa_answers.pain_score || 5,
+        validation_level: qa_answers.validation_level || 'none',
+        market_size_choice: qa_answers.market_size_choice || 'medium',
+        revenue_model_choice: qa_answers.revenue_model_choice || 'subscription',
+        why_now: qa_answers.why_now || '',
+        competitors: qa_answers.competitors || '',
+        moat: qa_answers.moat || '',
+        solo_founder: qa_answers.solo_founder !== undefined ? qa_answers.solo_founder : true,
+        has_technical_cofounder: qa_answers.has_technical_cofounder !== undefined ? qa_answers.has_technical_cofounder : false,
+        technical_background: qa_answers.technical_background || 'no',
+        current_stage: qa_answers.current_stage || 'forming',
+        launch_timeline: qa_answers.launch_timeline || '',
+        funding_status: qa_answers.funding_status || 'bootstrapped',
+        contact_name: qa_answers.contact_name || '',
+        contact_email: qa_answers.contact_email || '',
+      } : null;
+
       // PASS 1: AI extracts categorical signals (no scores)
-      const signals = await extractSignals(gemini, idea_text, qa_answers);
+      signals = await extractSignals(gemini, idea_text, fullQaAnswers);
+
+      // Map manual form answers back to signals for guaranteed deterministic rule evaluation
+      if (fullQaAnswers) {
+        signals.validation_level = fullQaAnswers.validation_level;
+        signals.pain_score = fullQaAnswers.pain_score;
+        signals.technical_background_choice = fullQaAnswers.technical_background;
+        signals.founder_count = fullQaAnswers.solo_founder ? 'solo' : 'team';
+        signals.has_technical_cofounder = fullQaAnswers.has_technical_cofounder;
+        signals.funding_status = fullQaAnswers.funding_status;
+        signals.current_stage = fullQaAnswers.current_stage;
+        signals.market_size_choice = fullQaAnswers.market_size_choice;
+        signals.revenue_model_choice = fullQaAnswers.revenue_model_choice;
+      }
 
       // RULE ENGINE: Deterministic scoring from signals
-      const ruleResults = runRuleEngine(signals);
+      ruleResults = runRuleEngine(signals);
 
       // PASS 2: AI narrates the rule-computed scores
-      const narrative = await generateNarrative(gemini, idea_text, signals, ruleResults, qa_answers);
+      const narrative = await generateNarrative(gemini, idea_text, signals, ruleResults, fullQaAnswers);
 
       // QA completeness for confidence calculation
-      const { answered: qaAnswered, total: qaTotal } = countQAAnswered(qa_answers);
+      const { answered: qaAnswered, total: qaTotal } = countQAAnswered(fullQaAnswers);
       const overallConfidence = computeOverallConfidence(ruleResults, qaAnswered, qaTotal);
 
       // Merge rule scores + narrative into final ScoringResponse
       aiResponse = {
         overall_score: 0, // computed below
+        startup_quality_score: 0, // computed below
+        investor_readiness_score: 0, // computed below
         triage_band: 'Promising / Needs Work', // computed below
         confidence_level: overallConfidence,
         startup_summary:              narrative.startup_summary,
-        key_strengths:                narrative.key_strengths,
-        top_risks:                    narrative.top_risks,
+        why_this_score:               narrative.why_this_score,
+        biggest_assumption:           narrative.biggest_assumption,
+        missing_evidence:             narrative.missing_evidence,
+        what_increased_the_score:     narrative.what_increased_the_score,
+        what_reduced_the_score:       narrative.what_reduced_the_score,
+        how_to_improve:               narrative.how_to_improve,
+        investor_questions:           narrative.investor_questions,
         highest_scoring_dimension:    narrative.highest_scoring_dimension,
         lowest_scoring_dimension:     narrative.lowest_scoring_dimension,
-        most_important_next_action:   narrative.most_important_next_action,
         dimensions: {
           investor_appeal: {
             score:               ruleResults.investor_appeal.score,
@@ -182,14 +285,46 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // Re-compute overall score to ensure formula consistency
-    const overallScore = computeOverallScore(aiResponse.dimensions);
-    const triageBand = computeTriageBand(overallScore);
+    // Re-compute overall score and split scores to ensure formula consistency
+    const qualityScore = computeStartupQualityScore(aiResponse.dimensions);
+    const readinessScore = computeInvestorReadinessScore(
+      aiResponse.dimensions,
+      qa_answers?.validation_level,
+      qa_answers?.current_stage
+    );
+    const overallScore = Math.round((qualityScore + readinessScore) / 2);
+    const triageBand = computeTriageBand(qualityScore, readinessScore);
+
     aiResponse.overall_score = overallScore;
+    aiResponse.startup_quality_score = qualityScore;
+    aiResponse.investor_readiness_score = readinessScore;
     aiResponse.triage_band = triageBand;
 
     const resultId = uuidv4();
     const now = new Date().toISOString();
+
+    const trainingData = {
+      raw_answers: qa_answers ?? null,
+      extracted_signals: signals,
+      scoring_factors: Object.fromEntries(
+        Object.entries(ruleResults).map(([k, v]) => [k, v.factors])
+      ),
+      dimension_scores: Object.fromEntries(
+        Object.entries(ruleResults).map(([k, v]) => [k, v.score])
+      ),
+      startup_quality_score: qualityScore,
+      investor_readiness_score: readinessScore,
+      narrative: {
+        startup_summary: aiResponse.startup_summary,
+        why_this_score: aiResponse.why_this_score,
+        biggest_assumption: aiResponse.biggest_assumption,
+        missing_evidence: aiResponse.missing_evidence,
+        what_increased_the_score: aiResponse.what_increased_the_score,
+        what_reduced_the_score: aiResponse.what_reduced_the_score,
+        how_to_improve: aiResponse.how_to_improve,
+        investor_questions: aiResponse.investor_questions,
+      },
+    };
 
     // ── Persist result ────────────────────────────────────────────────────────
     if (USE_MOCK_DB) {
@@ -204,6 +339,8 @@ export async function POST(req: NextRequest) {
         created_at: now,
         // @ts-expect-error — extended field for mock only
         anon_session_id: anon_session_id ?? null,
+        need_help: false,
+        ...trainingData,
       });
     } else {
       const admin = createAdminClient();
@@ -216,6 +353,8 @@ export async function POST(req: NextRequest) {
         overall_score: overallScore,
         triage_band: triageBand,
         unlocked,
+        need_help: false,
+        ...trainingData,
       });
 
       // Increment free_reports_used for authenticated free users
@@ -236,14 +375,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       id: resultId,
       overall_score: overallScore,
+      startup_quality_score: qualityScore,
+      investor_readiness_score: readinessScore,
       triage_band: triageBand,
       confidence_level: aiResponse.confidence_level,
       startup_summary: aiResponse.startup_summary,
-      key_strengths: aiResponse.key_strengths,
-      top_risks: aiResponse.top_risks,
+      why_this_score: aiResponse.why_this_score,
+      biggest_assumption: aiResponse.biggest_assumption,
+      missing_evidence: aiResponse.missing_evidence,
+      what_increased_the_score: aiResponse.what_increased_the_score,
+      what_reduced_the_score: aiResponse.what_reduced_the_score,
+      how_to_improve: aiResponse.how_to_improve,
+      investor_questions: aiResponse.investor_questions,
       highest_scoring_dimension: aiResponse.highest_scoring_dimension,
       lowest_scoring_dimension: aiResponse.lowest_scoring_dimension,
-      most_important_next_action: aiResponse.most_important_next_action,
       dimensions: aiResponse.dimensions,
       unlocked,
       free_reports_used: unlocked && !userId ? trial_count + 1 : freeReportsUsed,

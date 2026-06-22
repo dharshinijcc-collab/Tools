@@ -83,28 +83,42 @@ const founderMarketFitFactors: ScoringFactor[] = [
 
 /**
  * Realistic mock AI response used when USE_MOCK_AI=true or GEMINI_API_KEY is missing.
- * Idea: "An AI-powered legal research assistant for small law firms"
+ * Idea: "An AI-powered legal research assistant..."
  */
 export const MOCK_SCORING_RESPONSE: ScoringResponse = {
   overall_score: 7,
+  startup_quality_score: 7.2,
+  investor_readiness_score: 6.8,
   triage_band: 'Promising / Needs Work',
   confidence_level: 78,
-  startup_summary: 'This legal tech startup addresses a validated pain point in a large market with proven willingness to pay. While the technical approach is feasible and timing is favorable, the competitive landscape is crowded and founder credibility in the legal domain is critical for success.',
-  key_strengths: [
+  startup_summary: 'This vertical SaaS startup addresses a validated pain point in a large market with proven willingness to pay. While the technical approach is feasible and timing is favorable, the competitive landscape is crowded and founder credibility in this domain is critical for success.',
+  why_this_score: 'The startup demonstrates high potential due to strong customer demand and a clear ROI. However, investor readiness is currently constrained by the early stage (forming) and lack of customer validation. Adding a technical co-founder and securing initial letters of intent (LOIs) will significantly improve investor appeal.',
+  biggest_assumption: 'Law firms and legal departments will trust AI-generated briefs and legal summaries without requiring manual legal revision.',
+  missing_evidence: 'No early waitlist conversions or LOIs showing small law firms are willing to pay $300+/month for this tool.',
+  what_increased_the_score: [
     'Large total addressable market in legal tech with proven enterprise spend',
-    'Proven willingness to pay — law firms already subscribe to LexisNexis at $5K+/month',
+    'Subscription-based recurring SaaS model with high gross margins',
     'Strong market timing as LLM accuracy now clears the bar for legal reasoning tasks',
     'Clear technical feasibility with RAG over legal corpora being well-understood technology',
   ],
-  top_risks: [
-    'Crowded competitive landscape: Harvey AI ($100M raised), Clio, and Thomson Reuters all targeting this space',
+  what_reduced_the_score: [
+    'Crowded competitive landscape: Harvey AI and Thomson Reuters are targeting this space',
     'High switching costs of existing legal workflows create long enterprise sales cycles',
     'Citation hallucination liability — AI errors in legal briefs expose the company to professional liability risk',
     'Critical need for legal domain credibility: attorneys are trained to distrust non-lawyers',
   ],
-  highest_scoring_dimension: 'Market Timing — LLM capabilities have reached the accuracy threshold for legal tasks and courts are actively establishing AI disclosure rules, creating regulatory clarity rather than uncertainty.',
-  lowest_scoring_dimension: 'Competitive Moat — No inherent network effects in the core product and well-funded incumbents are aggressively targeting this exact segment with more capital and existing relationships.',
-  most_important_next_action: 'Secure a legal co-founder or advisory board member with bar credentials. Without domain credibility, enterprise sales cycles will stall at the legal ops gatekeeper level.',
+  highest_scoring_dimension: 'Market Timing — LLM capabilities have reached the accuracy threshold for legal tasks and courts are actively establishing AI disclosure rules, creating regulatory clarity.',
+  lowest_scoring_dimension: 'Competitive Moat — No inherent network effects in the core product and well-funded incumbents are aggressively targeting this segment with existing relationships.',
+  how_to_improve: [
+    'Recruit a legal tech co-founder with bar credentials to establish vertical trust.',
+    'Build and launch a 1-page waitlist to secure 50+ pre-signups from boutique law firms.',
+    'Implement a strict verification engine to double-check AI citations against official court databases.',
+  ],
+  investor_questions: [
+    'How do you protect customer data privacy when running LLM inference over sensitive legal filings?',
+    'What is your customer acquisition cost (CAC) payback period when selling to small law firms?',
+    'Why won\'t incumbents like Westlaw or Clio bundle AI search and make your tool redundant?',
+  ],
   dimensions: {
     investor_appeal: {
       score: 7,
@@ -220,7 +234,10 @@ export function generateMockResponse(ideaText: string): ScoringResponse {
   const cm  = clamp(dims.competitive_moat.score + scoreShift);
   const fmf = clamp(dims.founder_market_fit.score);
 
-  const overall = Math.round(ia * 0.20 + cd * 0.20 + mt * 0.15 + tf * 0.15 + cm * 0.15 + fmf * 0.15);
+  const quality = Math.min(10, Math.max(0, Math.round((cd * 0.35 + cm * 0.30 + tf * 0.20 + fmf * 0.15) * 10) / 10));
+  const readiness = Math.min(10, Math.max(0, Math.round((ia * 0.40 + mt * 0.30 + fmf * 0.15 + cd * 0.15) * 10) / 10));
+  const overall = Math.round((quality + readiness) / 2);
+
   const triage_band =
     overall >= 8 ? 'Strong Pass' :
     overall >= 5 ? 'Promising / Needs Work' :
@@ -230,9 +247,11 @@ export function generateMockResponse(ideaText: string): ScoringResponse {
 
   return {
     ...base,
-    overall_score:    overall,
+    overall_score:            overall,
+    startup_quality_score:    quality,
+    investor_readiness_score: readiness,
     triage_band,
-    confidence_level: confidenceLevel,
+    confidence_level:         confidenceLevel,
     dimensions: {
       ...dims,
       investor_appeal:       { ...dims.investor_appeal,       score: ia,  confidence: clamp(dims.investor_appeal.confidence + scoreShift * 2) },

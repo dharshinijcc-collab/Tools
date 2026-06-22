@@ -16,11 +16,6 @@ export default function DimensionCard({ label, icon, weight, detail, unlocked, i
   const color = scoreColor(detail.score);
   const pct   = (detail.score / 10) * 100;
 
-  // Split factors into detected (fired) and undetected
-  const detectedFactors    = detail.scoring_factors?.filter((f) => f.detected) ?? [];
-  const positiveDetected   = detectedFactors.filter((f) => f.points > 0);
-  const negativeDetected   = detectedFactors.filter((f) => f.points < 0);
-
   return (
     <div
       className="card"
@@ -83,71 +78,6 @@ export default function DimensionCard({ label, icon, weight, detail, unlocked, i
 
       {/* ── Body ───────────────────────────────────────────────────────── */}
       <div style={{ padding: '20px 24px' }}>
-
-        {/* ── How We Calculated This ───────────────────────────────────── */}
-        {detail.scoring_factors && detail.scoring_factors.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            <SectionLabel text="How We Calculated This" />
-
-            {/* Evaluation criteria chips */}
-            {detail.evaluation_criteria && detail.evaluation_criteria.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-                {detail.evaluation_criteria.map((c, i) => (
-                  <span key={i} style={{
-                    fontSize: 11, fontWeight: 600,
-                    color: 'var(--primary)',
-                    background: 'var(--primary-muted)',
-                    border: '1px solid rgba(46,92,138,0.18)',
-                    padding: '3px 10px', borderRadius: 999,
-                  }}>{c}</span>
-                ))}
-              </div>
-            )}
-
-            {/* Factor table */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {/* Positive detected factors */}
-              {positiveDetected.map((factor, i) => (
-                <FactorRow key={`pos-${i}`} factor={factor} type="positive" />
-              ))}
-              {/* Negative detected factors */}
-              {negativeDetected.map((factor, i) => (
-                <FactorRow key={`neg-${i}`} factor={factor} type="negative" />
-              ))}
-              {/* Divider + not-detected factors (greyed) */}
-              {detail.scoring_factors.filter((f) => !f.detected).length > 0 && (
-                <>
-                  {detectedFactors.length > 0 && (
-                    <div style={{ margin: '4px 0', borderTop: '1px dashed var(--border)' }} />
-                  )}
-                  {detail.scoring_factors
-                    .filter((f) => !f.detected)
-                    .slice(0, 5) // show at most 5 undetected to keep card compact
-                    .map((factor, i) => (
-                      <FactorRow key={`gray-${i}`} factor={factor} type="undetected" />
-                    ))}
-                </>
-              )}
-            </div>
-
-            {/* Score tally */}
-            <div style={{
-              marginTop: 12,
-              padding: '8px 12px',
-              background: color + '0D',
-              borderRadius: 8,
-              border: `1px solid ${color}22`,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            }}>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
-                Base (5) + Factor Points
-              </span>
-              <span style={{ fontSize: 13, fontWeight: 800, color }}>
-                = {detail.score} / 10
-              </span>
-            </div>
-          </div>
-        )}
 
         {/* ── Gated content (Why This Score + Improve) ─────────────────── */}
         {unlocked ? (
@@ -257,61 +187,6 @@ function SectionLabel({ text, color = 'var(--text-muted)' }: { text: string; col
       marginBottom: 10,
     }}>
       {text}
-    </div>
-  );
-}
-
-function FactorRow({
-  factor,
-  type,
-}: {
-  factor: { label: string; points: number; detected: boolean };
-  type: 'positive' | 'negative' | 'undetected';
-}) {
-  const isPositive   = type === 'positive';
-  const isNegative   = type === 'negative';
-  const isUndetected = type === 'undetected';
-
-  const iconEl = isPositive ? '✓' : isNegative ? '⚠' : '–';
-  const iconColor = isPositive ? '#2E7D32' : isNegative ? '#C0392B' : '#CBD5E1';
-  const textColor = isUndetected ? 'var(--text-muted)' : 'var(--text-primary)';
-  const pointsColor = isPositive ? '#2E7D32' : isNegative ? '#C0392B' : 'var(--text-muted)';
-  const bg = isPositive
-    ? 'rgba(46,125,50,0.04)'
-    : isNegative
-    ? 'rgba(192,57,43,0.04)'
-    : 'transparent';
-
-  const pointsLabel = factor.points > 0
-    ? `+${factor.points}`
-    : `${factor.points}`;
-
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '5px 10px',
-      borderRadius: 6,
-      background: bg,
-      opacity: isUndetected ? 0.45 : 1,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{
-          fontSize: 11, fontWeight: 800, color: iconColor,
-          width: 14, textAlign: 'center', flexShrink: 0,
-        }}>{iconEl}</span>
-        <span style={{ fontSize: 12, color: textColor, fontWeight: isUndetected ? 400 : 500 }}>
-          {factor.label}
-        </span>
-      </div>
-      <span style={{
-        fontSize: 11, fontWeight: 700, color: pointsColor,
-        background: isUndetected ? 'transparent' : (isPositive ? 'rgba(46,125,50,0.1)' : 'rgba(192,57,43,0.1)'),
-        padding: isUndetected ? '0' : '2px 7px',
-        borderRadius: 999,
-        flexShrink: 0,
-      }}>
-        {isUndetected ? '—' : pointsLabel}
-      </span>
     </div>
   );
 }

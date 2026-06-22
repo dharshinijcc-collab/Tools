@@ -9,6 +9,22 @@ import { StoredResult } from '@/types/scoring';
 // Module-level store (survives hot-reloads in dev via Next.js module cache)
 const store: Map<string, StoredResult> = new Map();
 
+// Mock outcome survey store
+export interface MockOutcomeSurvey {
+  id: string;
+  result_id: string;
+  original_score: number;
+  launched: boolean;
+  got_first_users: boolean;
+  paying_customers: boolean;
+  monthly_revenue: number;
+  raised_funding: boolean;
+  shut_down: boolean;
+  created_at: string;
+}
+
+const outcomeStore: Map<string, MockOutcomeSurvey> = new Map();
+
 export const mockDb = {
   saveResult(result: StoredResult): void {
     store.set(result.id, result);
@@ -33,6 +49,21 @@ export const mockDb = {
       }
     }
     return merged;
+  },
+
+  saveOutcomeSurvey(survey: MockOutcomeSurvey): void {
+    outcomeStore.set(survey.result_id, survey);
+  },
+
+  getOutcomeSurvey(resultId: string): MockOutcomeSurvey | null {
+    return outcomeStore.get(resultId) ?? null;
+  },
+
+  updateNeedHelp(id: string, needHelp: boolean): void {
+    const res = store.get(id);
+    if (res) {
+      store.set(id, { ...res, need_help: needHelp });
+    }
   },
 };
 

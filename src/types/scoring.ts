@@ -49,6 +49,19 @@ export interface ExtractedSignals {
   industry_experience: 'deep' | 'some' | 'none' | 'unknown';
   execution_track_record: 'strong' | 'some' | 'none' | 'unknown';
   credibility: 'high' | 'medium' | 'low' | 'unknown';
+
+  // --- NEW SIGNALS INJECTED/EXTRACTED ---
+  moat_strength: 'weak' | 'moderate' | 'strong';
+  why_now_strength: 'strong' | 'moderate' | 'weak';
+  validation_level: 'none' | 'conversations' | 'waitlist' | 'paying_customers';
+  pain_score: number;
+  technical_background_choice: 'can_code' | 'used_to_code' | 'no';
+  founder_count: 'solo' | 'team';
+  has_technical_cofounder: boolean;
+  funding_status: 'bootstrapped' | 'raising' | 'raised';
+  current_stage: 'forming' | 'ux_design' | 'prototype' | 'mvp';
+  market_size_choice: 'small' | 'medium' | 'large' | 'mass_market';
+  revenue_model_choice: 'subscription' | 'transaction_fee' | 'marketplace' | 'licensing' | 'advertising' | 'one_time' | 'other';
 }
 
 // ── Scoring Factor (Rule Engine output per factor) ────────────────────────────
@@ -97,15 +110,22 @@ export type DimensionDetail = z.infer<typeof DimensionDetailSchema>;
 // ── Full AI response schema ───────────────────────────────────────────────────
 
 export const ScoringResponseSchema = z.object({
-  overall_score: z.number().min(0).max(10),
+  overall_score: z.number().min(0).max(10), // kept for backwards compatibility/average
+  startup_quality_score: z.number().min(0).max(10),
+  investor_readiness_score: z.number().min(0).max(10),
   triage_band: z.enum(['Strong Pass', 'Promising / Needs Work', 'Not a Fit (Currently)']),
   confidence_level: z.number().min(0).max(100),
   startup_summary: z.string(),
-  key_strengths: z.array(z.string()),
-  top_risks: z.array(z.string()),
+  why_this_score: z.string(),
+  biggest_assumption: z.string(),
+  missing_evidence: z.string(),
+  what_increased_the_score: z.array(z.string()),
+  what_reduced_the_score: z.array(z.string()),
+  how_to_improve: z.array(z.string()),
+  investor_questions: z.array(z.string()),
   highest_scoring_dimension: z.string(),
   lowest_scoring_dimension: z.string(),
-  most_important_next_action: z.string(),
+  most_important_next_action: z.string().optional(), // kept for backward compatibility
   dimensions: z.object({
     investor_appeal: DimensionDetailSchema,
     customer_demand: DimensionDetailSchema,
@@ -164,19 +184,43 @@ export interface StoredResult {
   idea_text: string;
   response: ScoringResponse;
   overall_score: number;
+  startup_quality_score?: number;
+  investor_readiness_score?: number;
   triage_band: TriageBand;
   unlocked: boolean;
   created_at: string;
+
+  // DB Training fields
+  raw_answers?: any;
+  extracted_signals?: any;
+  scoring_factors?: any;
+  dimension_scores?: any;
+  narrative?: any;
+  need_help?: boolean | null;
 }
 
 export interface ResultDetailResponse {
   id: string;
   idea_text: string;
   overall_score: number;
+  startup_quality_score: number;
+  investor_readiness_score: number;
   triage_band: TriageBand;
+  confidence_level: number;
+  startup_summary: string;
+  why_this_score: string;
+  biggest_assumption: string;
+  missing_evidence: string;
+  what_increased_the_score: string[];
+  what_reduced_the_score: string[];
+  how_to_improve: string[];
+  investor_questions: string[];
+  highest_scoring_dimension: string;
+  lowest_scoring_dimension: string;
   dimensions: ScoringResponse['dimensions'];
   unlocked: boolean;
   created_at: string;
+  need_help?: boolean | null;
 }
 
 // ── API response shapes ───────────────────────────────────────────────────────
@@ -184,16 +228,23 @@ export interface ResultDetailResponse {
 export interface ScoreApiResponse {
   id: string;
   overall_score: number;
+  startup_quality_score: number;
+  investor_readiness_score: number;
   triage_band: TriageBand;
   confidence_level: number;
   startup_summary: string;
-  key_strengths: string[];
-  top_risks: string[];
+  why_this_score: string;
+  biggest_assumption: string;
+  missing_evidence: string;
+  what_increased_the_score: string[];
+  what_reduced_the_score: string[];
+  how_to_improve: string[];
+  investor_questions: string[];
   highest_scoring_dimension: string;
   lowest_scoring_dimension: string;
-  most_important_next_action: string;
   dimensions: ScoringResponse['dimensions'];
   unlocked: boolean;
+  free_reports_used?: number;
 }
 
 // ── User plan types ───────────────────────────────────────────────────────────
@@ -208,10 +259,26 @@ export interface UserProfile {
 }
 
 export interface QAAnswers {
-  target_audience: string;
-  problem_solved: string;
-  revenue_model: string;
+  // About The Idea
+  customer: string;
+  problem: string;
+  pain_score: number;
+  validation_level: 'none' | 'conversations' | 'waitlist' | 'paying_customers';
+  market_size_choice: 'small' | 'medium' | 'large' | 'mass_market';
+  revenue_model_choice: 'subscription' | 'transaction_fee' | 'marketplace' | 'licensing' | 'advertising' | 'one_time' | 'other';
+  why_now: string;
   competitors: string;
-  founder_background: string;
-  current_stage: string;
+  moat: string;
+
+  // About The Founder
+  solo_founder: boolean;
+  has_technical_cofounder: boolean;
+  technical_background: 'can_code' | 'used_to_code' | 'no';
+  current_stage: 'forming' | 'ux_design' | 'prototype' | 'mvp';
+  launch_timeline: string;
+  funding_status: 'bootstrapped' | 'raising' | 'raised';
+
+  // Contact
+  contact_name: string;
+  contact_email: string;
 }

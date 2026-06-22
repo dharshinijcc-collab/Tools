@@ -4,6 +4,8 @@ import Footer from '@/components/layout/Footer';
 import ScoreCard from '@/components/scoring/ScoreCard';
 import DimensionList from '@/components/scoring/DimensionList';
 import BlurGate from '@/components/scoring/BlurGate';
+import LeadGenCard from '@/components/scoring/LeadGenCard';
+import OutcomeSurvey from '@/components/scoring/OutcomeSurvey';
 import Link from 'next/link';
 import { TriageBand } from '@/types/scoring';
 
@@ -49,15 +51,23 @@ export default async function ResultPage({ params }: ResultPageProps) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <ScoreCard
               overallScore={result.overall_score}
+              startupQualityScore={result.startup_quality_score}
+              investorReadinessScore={result.investor_readiness_score}
               triageBand={result.triage_band as TriageBand}
               ideaText={result.idea_text}
               startupSummary={result.startup_summary}
-              keyStrengths={result.key_strengths}
-              topRisks={result.top_risks}
+              whyThisScore={result.why_this_score}
+              biggestAssumption={result.biggest_assumption}
+              missingEvidence={result.missing_evidence}
+              whatIncreasedTheScore={result.what_increased_the_score}
+              whatReducedTheScore={result.what_reduced_the_score}
+              howToImprove={result.how_to_improve}
+              investorQuestions={result.investor_questions}
               highestScoringDimension={result.highest_scoring_dimension}
               lowestScoringDimension={result.lowest_scoring_dimension}
-              mostImportantNextAction={result.most_important_next_action}
             />
+
+            <LeadGenCard resultId={id} initialNeedHelp={result.need_help} />
 
             {result.unlocked ? (
               <DimensionList dimensions={result.dimensions} unlocked={true} />
@@ -67,6 +77,8 @@ export default async function ResultPage({ params }: ResultPageProps) {
                 <BlurGate isSignedIn={false} resultId={id} ideaText={result.idea_text} />
               </>
             )}
+
+            <OutcomeSurvey resultId={id} />
           </div>
 
           <div style={{ marginTop: 32, textAlign: 'center' }}>

@@ -20,31 +20,32 @@ RULES:
 - "domain_expertise: expert" requires direct evidence the founder has deep, practitioner-level knowledge
 - "has_proprietary_data: true" requires evidence of unique, defensible data assets — not just "will collect data"
 - "too_early: true" means the market or technology clearly does not exist yet at commercial scale
+- Estimate "moat_strength" ('strong' | 'moderate' | 'weak') based on Moat and Competitors description.
+- Estimate "why_now_strength" ('strong' | 'moderate' | 'weak') based on Why Now description.
 
 Output strict JSON matching the schema. No commentary.`;
 
-interface QAContext {
-  target_audience?: string;
-  problem_solved?: string;
-  revenue_model?: string;
-  competitors?: string;
-  founder_background?: string;
-  current_stage?: string;
-}
-
-function buildSignalPrompt(ideaText: string, qa?: QAContext | null): string {
+function buildSignalPrompt(ideaText: string, qa?: QAAnswers | null): string {
   let prompt = `${SIGNAL_EXTRACTION_PROMPT}\n\n--- STARTUP IDEA ---\n${ideaText}`;
   if (qa) {
-    const parts: string[] = [];
-    if (qa.target_audience?.trim()) parts.push(`Target Customer: ${qa.target_audience.trim()}`);
-    if (qa.problem_solved?.trim()) parts.push(`Core Pain Point: ${qa.problem_solved.trim()}`);
-    if (qa.revenue_model?.trim()) parts.push(`Revenue Model: ${qa.revenue_model.trim()}`);
-    if (qa.competitors?.trim()) parts.push(`Competition: ${qa.competitors.trim()}`);
-    if (qa.founder_background?.trim()) parts.push(`Founder Background: ${qa.founder_background.trim()}`);
-    if (qa.current_stage?.trim()) parts.push(`Current Stage: ${qa.current_stage.trim()}`);
-    if (parts.length > 0) {
-      prompt += `\n\n--- FOUNDER CONTEXT ---\n${parts.join('\n')}`;
+    prompt += `\n\n--- FOUNDER ANSWERS ---\n`;
+    prompt += `- Target Customer: ${qa.customer}\n`;
+    prompt += `- Core Problem: ${qa.problem}\n`;
+    prompt += `- Pain Score (1-10): ${qa.pain_score}\n`;
+    prompt += `- Validation Level: ${qa.validation_level}\n`;
+    prompt += `- Market Size Choice: ${qa.market_size_choice}\n`;
+    prompt += `- Revenue Model Choice: ${qa.revenue_model_choice}\n`;
+    prompt += `- Why Now: ${qa.why_now}\n`;
+    prompt += `- Competitors: ${qa.competitors}\n`;
+    prompt += `- Moat / Differentiation: ${qa.moat}\n`;
+    prompt += `- Solo Founder: ${qa.solo_founder ? 'Yes' : 'No'}\n`;
+    if (!qa.solo_founder) {
+      prompt += `- Technical Co-founder Present: ${qa.has_technical_cofounder ? 'Yes' : 'No'}\n`;
     }
+    prompt += `- Technical Background: ${qa.technical_background}\n`;
+    prompt += `- Current Stage: ${qa.current_stage}\n`;
+    prompt += `- Launch Timeline: ${qa.launch_timeline}\n`;
+    prompt += `- Funding Status: ${qa.funding_status}\n`;
   }
   return prompt;
 }
@@ -98,6 +99,19 @@ const SIGNAL_SCHEMA: unknown = {
     industry_experience:    { type: SchemaType.STRING, enum: ['deep', 'some', 'none', 'unknown'] },
     execution_track_record: { type: SchemaType.STRING, enum: ['strong', 'some', 'none', 'unknown'] },
     credibility:            { type: SchemaType.STRING, enum: ['high', 'medium', 'low', 'unknown'] },
+
+    // NEW EXTRACTED SIGNALS
+    moat_strength:               { type: SchemaType.STRING, enum: ['weak', 'moderate', 'strong'] },
+    why_now_strength:            { type: SchemaType.STRING, enum: ['strong', 'moderate', 'weak'] },
+    validation_level:            { type: SchemaType.STRING, enum: ['none', 'conversations', 'waitlist', 'paying_customers'] },
+    pain_score:                  { type: SchemaType.INTEGER },
+    technical_background_choice: { type: SchemaType.STRING, enum: ['can_code', 'used_to_code', 'no'] },
+    founder_count:               { type: SchemaType.STRING, enum: ['solo', 'team'] },
+    has_technical_cofounder:     { type: SchemaType.BOOLEAN },
+    funding_status:              { type: SchemaType.STRING, enum: ['bootstrapped', 'raising', 'raised'] },
+    current_stage:               { type: SchemaType.STRING, enum: ['forming', 'ux_design', 'prototype', 'mvp'] },
+    market_size_choice:          { type: SchemaType.STRING, enum: ['small', 'medium', 'large', 'mass_market'] },
+    revenue_model_choice:        { type: SchemaType.STRING, enum: ['subscription', 'transaction_fee', 'marketplace', 'licensing', 'advertising', 'one_time', 'other'] },
   },
   required: [
     'market_size', 'revenue_model', 'growth_potential', 'scalability', 'exit_potential', 'investor_interest_in_space',
@@ -106,6 +120,8 @@ const SIGNAL_SCHEMA: unknown = {
     'existing_apis_available', 'mvp_complexity', 'requires_new_hardware', 'ai_dependency', 'infrastructure_complexity',
     'has_proprietary_data', 'has_network_effects', 'switching_costs', 'differentiation', 'competition_level', 'easy_to_copy',
     'domain_expertise', 'technical_background', 'industry_experience', 'execution_track_record', 'credibility',
+    'moat_strength', 'why_now_strength', 'validation_level', 'pain_score', 'technical_background_choice',
+    'founder_count', 'has_technical_cofounder', 'funding_status', 'current_stage', 'market_size_choice', 'revenue_model_choice'
   ],
 };
 
@@ -116,7 +132,7 @@ const SIGNAL_SCHEMA: unknown = {
 export async function extractSignals(
   geminiClient: GoogleGenerativeAI,
   ideaText: string,
-  qa?: QAContext | null,
+  qa?: QAAnswers | null,
 ): Promise<ExtractedSignals> {
   const model = geminiClient.getGenerativeModel({
     model: 'gemini-2.5-flash',
@@ -141,16 +157,30 @@ export async function extractSignals(
  * Count how many Q&A fields the founder answered.
  * Used to calculate base confidence level.
  */
-export function countQAAnswered(qa?: QAContext | null): { answered: number; total: number } {
-  const total = 6; // target_audience, problem_solved, revenue_model, competitors, founder_background, current_stage
+export function countQAAnswered(qa?: QAAnswers | null): { answered: number; total: number } {
+  const total = 14;
   if (!qa) return { answered: 0, total };
-  const answered = [
-    qa.target_audience,
-    qa.problem_solved,
-    qa.revenue_model,
-    qa.competitors,
-    qa.founder_background,
-    qa.current_stage,
-  ].filter((v) => v && v.trim().length >= 5).length;
+  
+  let answered = 0;
+  if (qa.customer?.trim().length >= 3) answered++;
+  if (qa.problem?.trim().length >= 3) answered++;
+  if (qa.pain_score !== undefined && qa.pain_score >= 1) answered++;
+  if (qa.validation_level) answered++;
+  if (qa.market_size_choice) answered++;
+  if (qa.revenue_model_choice) answered++;
+  if (qa.why_now?.trim().length >= 3) answered++;
+  if (qa.competitors?.trim().length >= 3) answered++;
+  if (qa.moat?.trim().length >= 3) answered++;
+  if (qa.solo_founder !== undefined) answered++;
+  if (!qa.solo_founder && qa.has_technical_cofounder !== undefined) {
+    answered++;
+  } else if (qa.solo_founder) {
+    answered++;
+  }
+  if (qa.technical_background) answered++;
+  if (qa.current_stage) answered++;
+  if (qa.launch_timeline?.trim().length >= 3) answered++;
+  if (qa.funding_status) answered++;
+
   return { answered, total };
 }

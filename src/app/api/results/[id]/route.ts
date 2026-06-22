@@ -77,21 +77,27 @@ export async function GET(
       : stripGatedFields(result.response as ScoringResponse);
 
     return NextResponse.json({
-      id:            result.id,
-      idea_text:     result.idea_text,
-      overall_score: result.overall_score,
-      triage_band:   result.triage_band,
-      // Return full response fields for the overview card
+      id:                           result.id,
+      idea_text:                    result.idea_text,
+      overall_score:                result.overall_score,
+      startup_quality_score:        result.startup_quality_score ?? safeResponse.startup_quality_score ?? 0,
+      investor_readiness_score:      result.investor_readiness_score ?? safeResponse.investor_readiness_score ?? 0,
+      triage_band:                  result.triage_band,
       confidence_level:             safeResponse.confidence_level,
       startup_summary:              isUnlocked ? safeResponse.startup_summary : '',
-      key_strengths:                isUnlocked ? safeResponse.key_strengths : [],
-      top_risks:                    isUnlocked ? safeResponse.top_risks : [],
+      why_this_score:               isUnlocked ? safeResponse.why_this_score : '',
+      biggest_assumption:           isUnlocked ? safeResponse.biggest_assumption : '',
+      missing_evidence:             isUnlocked ? safeResponse.missing_evidence : '',
+      what_increased_the_score:     isUnlocked ? safeResponse.what_increased_the_score : [],
+      what_reduced_the_score:       isUnlocked ? safeResponse.what_reduced_the_score : [],
+      how_to_improve:               isUnlocked ? safeResponse.how_to_improve : [],
+      investor_questions:           isUnlocked ? safeResponse.investor_questions : [],
       highest_scoring_dimension:    isUnlocked ? safeResponse.highest_scoring_dimension : '',
       lowest_scoring_dimension:     isUnlocked ? safeResponse.lowest_scoring_dimension : '',
-      most_important_next_action:   isUnlocked ? safeResponse.most_important_next_action : '',
-      dimensions:    safeResponse.dimensions,
-      unlocked:      isUnlocked,
-      created_at:    result.created_at,
+      dimensions:                   safeResponse.dimensions,
+      unlocked:                     isUnlocked,
+      created_at:                   result.created_at,
+      need_help:                    result.need_help ?? false,
     });
   } catch (err) {
     console.error('[GET /api/results/[id]]', err);

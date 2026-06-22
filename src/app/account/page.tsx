@@ -202,6 +202,9 @@ export default function AccountPage() {
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: 'var(--text-secondary)' }}>
                   <span style={{ color: 'var(--score-green)', fontWeight: 'bold' }}>✓</span> Priority processing queue
                 </li>
+                <li style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, color: 'var(--text-secondary)' }}>
+                  <span style={{ color: 'var(--score-green)', fontWeight: 'bold' }}>✓</span> <strong>Export reports</strong> to PDF / Pitch Deck formats
+                </li>
               </ul>
 
               {isPro ? (

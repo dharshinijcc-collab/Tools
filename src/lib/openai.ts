@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai';
-import { ExtractedSignals } from '@/types/scoring';
+import { ExtractedSignals, QAAnswers } from '@/types/scoring';
 import { RuleEngineOutput } from '@/lib/rule-engine';
 
 let client: GoogleGenerativeAI | null = null;
@@ -11,36 +11,29 @@ export function getGeminiClient(): GoogleGenerativeAI {
   return client;
 }
 
-interface QAAnswers {
-  target_audience?: string;
-  problem_solved?: string;
-  revenue_model?: string;
-  competitors?: string;
-  founder_background?: string;
-  current_stage?: string;
-}
-
 /**
  * AI PASS 2 — Narrative Generation
  *
  * The rule engine has already computed scores. The AI's job here is purely
  * to explain WHY those scores make sense, given the detected signals.
  * The AI does NOT re-score — it acts as an analyst narrating predetermined findings.
- *
- * Each dimension gets:
- *   - why_this_score: 150–300 word explanation
- *   - improvement_actions: 3–5 concrete next steps
- *
- * Overall assessment:
- *   - startup_summary, key_strengths, top_risks,
- *     highest_scoring_dimension, lowest_scoring_dimension,
- *     most_important_next_action
  */
 
 function formatSignalsForPrompt(signals: ExtractedSignals): string {
   return `Detected Signals:
-  Market Size: ${signals.market_size}
-  Revenue Model: ${signals.revenue_model}
+  Market Size Choice: ${signals.market_size_choice}
+  Revenue Model Choice: ${signals.revenue_model_choice}
+  Why Now Strength: ${signals.why_now_strength}
+  Moat Strength: ${signals.moat_strength}
+  Validation Level: ${signals.validation_level}
+  Pain Score: ${signals.pain_score}
+  Founder Count: ${signals.founder_count}
+  Has Technical Co-founder: ${signals.has_technical_cofounder}
+  Technical Background Choice: ${signals.technical_background_choice}
+  Current Stage: ${signals.current_stage}
+  Funding Status: ${signals.funding_status}
+  Market Size (extracted): ${signals.market_size}
+  Revenue Model (extracted): ${signals.revenue_model}
   Growth Potential: ${signals.growth_potential}
   Scalability: ${signals.scalability}
   Exit Potential: ${signals.exit_potential}
@@ -92,7 +85,6 @@ function formatRuleResultsForPrompt(rules: RuleEngineOutput): string {
 
 /**
  * Build the narrative prompt for AI Pass 2.
- * The AI receives scores + signals and must explain, not judge.
  */
 export function buildNarrativePrompt(
   ideaText: string,
@@ -102,13 +94,24 @@ export function buildNarrativePrompt(
 ): string {
   const qaSection = qa ? (() => {
     const parts: string[] = [];
-    if (qa.target_audience?.trim()) parts.push(`Target Customer: ${qa.target_audience.trim()}`);
-    if (qa.problem_solved?.trim()) parts.push(`Core Pain Point: ${qa.problem_solved.trim()}`);
-    if (qa.revenue_model?.trim()) parts.push(`Revenue Model: ${qa.revenue_model.trim()}`);
-    if (qa.competitors?.trim()) parts.push(`Competition: ${qa.competitors.trim()}`);
-    if (qa.founder_background?.trim()) parts.push(`Founder Background: ${qa.founder_background.trim()}`);
-    if (qa.current_stage?.trim()) parts.push(`Current Stage: ${qa.current_stage.trim()}`);
-    return parts.length > 0 ? `\n\n--- FOUNDER CONTEXT ---\n${parts.join('\n')}` : '';
+    parts.push(`Target Customer: ${qa.customer}`);
+    parts.push(`Core Problem: ${qa.problem}`);
+    parts.push(`Pain Score (1-10): ${qa.pain_score}`);
+    parts.push(`Validation Level: ${qa.validation_level}`);
+    parts.push(`Market Size Choice: ${qa.market_size_choice}`);
+    parts.push(`Revenue Model Choice: ${qa.revenue_model_choice}`);
+    parts.push(`Why Now: ${qa.why_now}`);
+    parts.push(`Competition: ${qa.competitors}`);
+    parts.push(`Moat / Differentiation: ${qa.moat}`);
+    parts.push(`Solo Founder: ${qa.solo_founder ? 'Yes' : 'No'}`);
+    if (!qa.solo_founder) {
+      parts.push(`Technical Co-founder Present: ${qa.has_technical_cofounder ? 'Yes' : 'No'}`);
+    }
+    parts.push(`Technical Background: ${qa.technical_background}`);
+    parts.push(`Current Stage: ${qa.current_stage}`);
+    parts.push(`Launch Timeline: ${qa.launch_timeline}`);
+    parts.push(`Funding Status: ${qa.funding_status}`);
+    return `\n\n--- FOUNDER CONTEXT ---\n${parts.join('\n')}`;
   })() : '';
 
   return `You are a senior venture capital analyst writing an investor-grade due diligence report.
@@ -119,12 +122,13 @@ Your ONLY job is to EXPLAIN these scores in clear, specific, investor-grade lang
 CRITICAL RULES:
 - DO NOT change, dispute, or re-assign any score. The scores are final.
 - Every explanation must reference the specific signals that caused the score.
-- Avoid generic phrases: "good potential", "promising", "interesting concept", "needs validation".
+- Avoid generic phrases: "good potential", "promising", "interesting concept".
 - Each why_this_score must be 150–300 words. Be specific about WHY — not just WHAT.
-- improvement_actions must be concrete and actionable, not vague advice.
 - Reference real market dynamics, competitor names, industry specifics where relevant.
-- Good: "The market scores high because businesses are already spending $X on similar tools and the sector is growing at Y%."
-- Bad: "The market looks promising."
+- You must identify the "biggest_assumption" (the primary unvalidated leap-of-faith assumption).
+- You must identify the "missing_evidence" (the single most critical missing proof point).
+- For overall "how_to_improve", provide exactly 3 specific, highly-actionable next actions.
+- For overall "investor_questions", provide exactly 3 specific questions that investors will ask next.
 
 --- STARTUP IDEA ---
 ${ideaText}${qaSection}
@@ -135,18 +139,20 @@ ${formatRuleResultsForPrompt(ruleResults)}
 --- EXTRACTED SIGNALS ---
 ${formatSignalsForPrompt(signals)}
 
-For each dimension, write:
+For each dimension in the dimensions object, write:
 1. why_this_score: A detailed 150–300 word explanation referencing the specific signals above
 2. improvement_actions: 3–5 concrete, specific next steps to increase this score
 3. evaluation_criteria: 4–5 factor labels that describe what was evaluated
 
 For the overall assessment, write:
 - startup_summary: 2–3 sentence executive summary of the startup's overall viability
-- key_strengths: 3–5 specific strengths identified from the signals
-- top_risks: 3–5 specific risks or gaps
-- highest_scoring_dimension: The dimension with the best score and one sentence why
-- lowest_scoring_dimension: The dimension with the worst score and one sentence why
-- most_important_next_action: The single highest-leverage action the founder can take now
+- why_this_score: 150-250 word detailed explanation of the overall score (addressing the balance between Startup Quality and Investor Readiness)
+- biggest_assumption: The single largest unvalidated assumption this business relies on (e.g. "Solo law firms will trust AI-generated briefs without manual lawyer review.")
+- missing_evidence: The most critical missing proof point (e.g. "No evidence that founders can acquire customers at a cost lower than the contract value.")
+- what_increased_the_score: 3-5 specific strengths identified from the signals
+- what_reduced_the_score: 3-5 specific risks or gaps
+- how_to_improve: exactly 3 specific next actions the founder can take now
+- investor_questions: exactly 3 specific questions that investors will likely ask next
 
 Return strict JSON only — no markdown, no commentary.`;
 }
@@ -167,11 +173,15 @@ export const NARRATIVE_RESPONSE_SCHEMA: unknown = {
   type: SchemaType.OBJECT,
   properties: {
     startup_summary:              { type: SchemaType.STRING },
-    key_strengths:                { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-    top_risks:                    { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+    why_this_score:               { type: SchemaType.STRING },
+    biggest_assumption:           { type: SchemaType.STRING },
+    missing_evidence:             { type: SchemaType.STRING },
+    what_increased_the_score:     { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+    what_reduced_the_score:       { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+    how_to_improve:               { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+    investor_questions:           { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
     highest_scoring_dimension:    { type: SchemaType.STRING },
     lowest_scoring_dimension:     { type: SchemaType.STRING },
-    most_important_next_action:   { type: SchemaType.STRING },
     dimensions: {
       type: SchemaType.OBJECT,
       properties: {
@@ -189,19 +199,23 @@ export const NARRATIVE_RESPONSE_SCHEMA: unknown = {
     },
   },
   required: [
-    'startup_summary', 'key_strengths', 'top_risks',
-    'highest_scoring_dimension', 'lowest_scoring_dimension',
-    'most_important_next_action', 'dimensions',
+    'startup_summary', 'why_this_score', 'biggest_assumption', 'missing_evidence',
+    'what_increased_the_score', 'what_reduced_the_score', 'how_to_improve',
+    'investor_questions', 'highest_scoring_dimension', 'lowest_scoring_dimension', 'dimensions',
   ],
 };
 
 export interface NarrativeResponse {
   startup_summary: string;
-  key_strengths: string[];
-  top_risks: string[];
+  why_this_score: string;
+  biggest_assumption: string;
+  missing_evidence: string;
+  what_increased_the_score: string[];
+  what_reduced_the_score: string[];
+  how_to_improve: string[];
+  investor_questions: string[];
   highest_scoring_dimension: string;
   lowest_scoring_dimension: string;
-  most_important_next_action: string;
   dimensions: Record<string, {
     evaluation_criteria: string[];
     why_this_score: string;

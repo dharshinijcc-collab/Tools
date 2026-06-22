@@ -46,6 +46,19 @@ function scoreInvestorAppeal(s: ExtractedSignals): DimensionRuleResult {
     buildFactor('High Growth Potential',          'growth_potential',         +1,  s.growth_potential === 'high'),
     buildFactor('Small / Niche Market',           'market_size_small',        -2,  s.market_size === 'small'),
     buildFactor('Low Scalability',                'scalability_low',          -1,  s.scalability === 'low'),
+
+    // --- NEW FACTORS ---
+    buildFactor('Funding: Bootstrapped',          'funding_bootstrapped',      0,  s.funding_status === 'bootstrapped'),
+    buildFactor('Funding: Raising',               'funding_raising',          +1,  s.funding_status === 'raising'),
+    buildFactor('Funding: Raised',                'funding_raised',           +1,  s.funding_status === 'raised'),
+    buildFactor('Investor Appeal: Paying Customers','appeal_paying_cust',      +4,  s.validation_level === 'paying_customers'),
+    buildFactor('Investor Appeal: Waitlist',      'appeal_waitlist',          +2,  s.validation_level === 'waitlist'),
+    buildFactor('Investor Appeal: Conversations', 'appeal_convs',             +1,  s.validation_level === 'conversations'),
+    buildFactor('Investor Appeal: No Validation', 'appeal_no_val',            -2,  s.validation_level === 'none'),
+    buildFactor('Market Opportunity: Mass Market','mkt_mass_market',          +3,  s.market_size_choice === 'mass_market'),
+    buildFactor('Market Opportunity: Large',      'mkt_large',                +2,  s.market_size_choice === 'large'),
+    buildFactor('Market Opportunity: Medium',     'mkt_medium',               +1,  s.market_size_choice === 'medium'),
+    buildFactor('Market Opportunity: Small',      'mkt_small',                -2,  s.market_size_choice === 'small'),
   ];
 
   return computeDimensionScore(factors, 'investor_appeal', s);
@@ -66,6 +79,15 @@ function scoreCustomerDemand(s: ExtractedSignals): DimensionRuleResult {
     buildFactor('Low Willingness to Pay',         'willingness_low',        -2,  s.willingness_to_pay === 'low'),
     buildFactor('Rare / Infrequent Problem',      'problem_frequency_rare', -2,  s.problem_frequency === 'rare'),
     buildFactor('Mild Pain Point',                'pain_mild',              -1,  s.pain_severity === 'mild'),
+
+    // --- NEW FACTORS ---
+    buildFactor('No Validation',                  'validation_none',        -2,  s.validation_level === 'none'),
+    buildFactor('Validation via Conversations',   'validation_convs',       +1,  s.validation_level === 'conversations'),
+    buildFactor('Validation via Waitlist',        'validation_waitlist',    +3,  s.validation_level === 'waitlist'),
+    buildFactor('Validation via Paying Customers','validation_paying',      +5,  s.validation_level === 'paying_customers'),
+    buildFactor('High Pain Score (8-10)',         'pain_score_high',        +2,  !!s.pain_score && s.pain_score >= 8),
+    buildFactor('Medium Pain Score (5-7)',        'pain_score_med',         +1,  !!s.pain_score && s.pain_score >= 5 && s.pain_score <= 7),
+    buildFactor('Low Pain Score (1-4)',           'pain_score_low',         -1,  !!s.pain_score && s.pain_score >= 1 && s.pain_score <= 4),
   ];
 
   return computeDimensionScore(factors, 'customer_demand', s);
@@ -86,6 +108,11 @@ function scoreMarketTiming(s: ExtractedSignals): DimensionRuleResult {
     buildFactor('Declining Industry',             'industry_declining',      -3,  s.industry_growth === 'declining'),
     buildFactor('Restrictive Regulation',         'regulation_restrictive',  -2,  s.regulatory_environment === 'restrictive'),
     buildFactor('Technology Not Ready',           'tech_not_ready',          -2,  s.technology_maturity === 'not_ready'),
+
+    // --- NEW FACTORS ---
+    buildFactor('Strong "Why Now" Case',          'why_now_strong',          +3,  s.why_now_strength === 'strong'),
+    buildFactor('Moderate "Why Now" Case',        'why_now_mod',             +1,  s.why_now_strength === 'moderate'),
+    buildFactor('Weak "Why Now" Case',            'why_now_weak',            -2,  s.why_now_strength === 'weak'),
   ];
 
   return computeDimensionScore(factors, 'market_timing', s);
@@ -104,6 +131,12 @@ function scoreTechnicalFeasibility(s: ExtractedSignals): DimensionRuleResult {
     buildFactor('Requires New Hardware',          'requires_new_hardware',   -2,  s.requires_new_hardware),
     buildFactor('Complex MVP',                    'mvp_complex',             -1,  s.mvp_complexity === 'complex'),
     buildFactor('High Infrastructure Complexity', 'infrastructure_high',     -1,  s.infrastructure_complexity === 'high'),
+
+    // --- NEW FACTORS ---
+    buildFactor('Forming Stage',                  'stage_forming',            -2,  s.current_stage === 'forming'),
+    buildFactor('UX Design Stage',                'stage_ux_design',           0,  s.current_stage === 'ux_design'),
+    buildFactor('Prototype Stage',                'stage_prototype',          +2,  s.current_stage === 'prototype'),
+    buildFactor('MVP Stage',                      'stage_mvp',                +4,  s.current_stage === 'mvp'),
   ];
 
   return computeDimensionScore(factors, 'technical_feasibility', s);
@@ -125,6 +158,11 @@ function scoreCompetitiveMoat(s: ExtractedSignals): DimensionRuleResult {
     buildFactor('High Competition',              'competition_high',       -1,  s.competition_level === 'high'),
     buildFactor('Weak Differentiation',           'differentiation_weak',  -2,  s.differentiation === 'weak'),
     buildFactor('Low Switching Costs',            'switching_costs_low',   -1,  s.switching_costs === 'low'),
+
+    // --- NEW FACTORS ---
+    buildFactor('Strong Competitive Moat',        'moat_strong',           +3,  s.moat_strength === 'strong'),
+    buildFactor('Moderate Competitive Moat',      'moat_moderate',         +1,  s.moat_strength === 'moderate'),
+    buildFactor('Weak Competitive Moat',          'moat_weak',             -2,  s.moat_strength === 'weak'),
   ];
 
   return computeDimensionScore(factors, 'competitive_moat', s);
@@ -146,6 +184,13 @@ function scoreFounderMarketFit(s: ExtractedSignals): DimensionRuleResult {
     buildFactor('Learning Domain (No Experience)','domain_learning',          -1,  s.domain_expertise === 'learning'),
     buildFactor('No Industry Experience',         'no_industry_exp',          -1,  s.industry_experience === 'none'),
     buildFactor('No Execution Track Record',      'no_execution',             -1,  s.execution_track_record === 'none'),
+
+    // --- NEW FACTORS ---
+    buildFactor('Founder Can Code',              'tech_can_code',            +2,  s.technical_background_choice === 'can_code'),
+    buildFactor('Founder Used to Code',           'tech_used_to_code',        +1,  s.technical_background_choice === 'used_to_code'),
+    buildFactor('No Technical Background',        'tech_no_code',             0,  s.technical_background_choice === 'no'),
+    buildFactor('Technical Co-founder Present',   'tech_cofounder_present',   +1,  s.founder_count === 'team' && s.has_technical_cofounder === true),
+    buildFactor('Solo Founder',                   'solo_founder_neutral',      0,  s.founder_count === 'solo'),
   ];
 
   return computeDimensionScore(factors, 'founder_market_fit', s);
@@ -201,6 +246,8 @@ function computeSignalConfidence(dimensionKey: string, s: ExtractedSignals): num
       isKnown(s.exit_potential),
       isKnown(s.growth_potential),
       isKnown(s.investor_interest_in_space),
+      isKnown(s.market_size_choice),
+      isKnown(s.funding_status),
     ],
     customer_demand: () => [
       isKnown(s.pain_severity),
@@ -208,6 +255,8 @@ function computeSignalConfidence(dimensionKey: string, s: ExtractedSignals): num
       s.existing_buyers !== undefined,
       s.clear_roi !== undefined,
       isKnown(s.willingness_to_pay),
+      isKnown(s.validation_level),
+      isKnown(s.pain_score),
     ],
     market_timing: () => [
       isKnown(s.industry_growth),
@@ -215,6 +264,7 @@ function computeSignalConfidence(dimensionKey: string, s: ExtractedSignals): num
       isKnown(s.consumer_adoption),
       isKnown(s.regulatory_environment),
       s.too_early !== undefined,
+      isKnown(s.why_now_strength),
     ],
     technical_feasibility: () => [
       s.existing_apis_available !== undefined,
@@ -222,6 +272,7 @@ function computeSignalConfidence(dimensionKey: string, s: ExtractedSignals): num
       s.requires_new_hardware !== undefined,
       isKnown(s.infrastructure_complexity),
       isKnown(s.ai_dependency),
+      isKnown(s.current_stage),
     ],
     competitive_moat: () => [
       s.has_proprietary_data !== undefined,
@@ -230,6 +281,7 @@ function computeSignalConfidence(dimensionKey: string, s: ExtractedSignals): num
       isKnown(s.differentiation),
       isKnown(s.competition_level),
       s.easy_to_copy !== undefined,
+      isKnown(s.moat_strength),
     ],
     founder_market_fit: () => [
       isKnown(s.domain_expertise),
@@ -237,6 +289,8 @@ function computeSignalConfidence(dimensionKey: string, s: ExtractedSignals): num
       isKnown(s.industry_experience),
       isKnown(s.execution_track_record),
       isKnown(s.credibility),
+      isKnown(s.founder_count),
+      isKnown(s.technical_background_choice),
     ],
   };
 

@@ -6,162 +6,123 @@ import { useTrialCount } from '@/hooks/useTrialCount';
 import { useAuth } from '@/hooks/useAuth';
 import ScoreCard from './ScoreCard';
 import DimensionList from './DimensionList';
-import BlurGate from './BlurGate';
 import SkeletonResult from './SkeletonResult';
-import { TriageBand } from '@/types/scoring';
+import { TriageBand, QAAnswers } from '@/types/scoring';
 import Link from 'next/link';
-
-interface Question {
-  id: string;
-  label: string;
-  question: string;
-  placeholder: string;
-  icon: string;
-  dimension: string;
-  minLength: number;
-}
-
-const WIZARD_QUESTIONS: Question[] = [
-  {
-    id: 'idea_text',
-    label: 'The Idea',
-    question: 'Describe your startup idea',
-    placeholder: 'e.g. An AI-powered legal research assistant that helps small law firms draft briefs in half the time...',
-    icon: '💡',
-    dimension: 'Core Concept',
-    minLength: 10,
-  },
-  {
-    id: 'target_audience',
-    label: 'Audience',
-    question: 'Who is your primary target customer?',
-    placeholder: 'e.g. Small law firms with 5–20 attorneys, or B2B SaaS companies struggling with compliance...',
-    icon: '🎯',
-    dimension: 'Customer Demand',
-    minLength: 10,
-  },
-  {
-    id: 'problem_solved',
-    label: 'Problem',
-    question: 'What specific pain point does your idea solve?',
-    placeholder: 'e.g. Legal teams spend 40% of their time on repetitive research tasks that could be automated...',
-    icon: '🔥',
-    dimension: 'Customer Demand',
-    minLength: 10,
-  },
-  {
-    id: 'revenue_model',
-    label: 'Revenue',
-    question: 'How do you plan to generate revenue?',
-    placeholder: 'e.g. Monthly SaaS subscription of $299/seat, or usage-based pricing per API call...',
-    icon: '💰',
-    dimension: 'Investor Appeal',
-    minLength: 10,
-  },
-  {
-    id: 'competitors',
-    label: 'Competitors',
-    question: 'Who are your main competitors and what makes you different?',
-    placeholder: 'e.g. Westlaw and LexisNexis exist but are expensive and not AI-native. We are 10x cheaper and auto-draft briefs...',
-    icon: '🏰',
-    dimension: 'Competitive Moat',
-    minLength: 10,
-  },
-  {
-    id: 'founder_background',
-    label: 'Founder',
-    question: 'What is your relevant background or domain expertise?',
-    placeholder: 'e.g. I was a practicing attorney for 8 years and have co-founded a legal tech startup before...',
-    icon: '🧭',
-    dimension: 'Founder-Market Fit',
-    minLength: 10,
-  },
-  {
-    id: 'current_stage',
-    label: 'Stage',
-    question: 'What stage is your idea at right now?',
-    placeholder: 'e.g. Pre-idea (just thinking), have an MVP with 3 beta users, or raised a pre-seed and launching next month...',
-    icon: '🚀',
-    dimension: 'Technical Feasibility',
-    minLength: 5,
-  },
-];
 
 export default function ScoringWidget() {
   const [step, setStep] = useState<'idle' | number>('idle');
-  const [answers, setAnswers] = useState<Record<string, string>>({
-    idea_text: '',
-    target_audience: '',
-    problem_solved: '',
-    revenue_model: '',
-    competitors: '',
-    founder_background: '',
-    current_stage: '',
-  });
+  
+  // Step 1: About The Idea
+  const [customer, setCustomer] = useState('');
+  const [problem, setProblem] = useState('');
+  const [painScore, setPainScore] = useState(5);
+  const [validationLevel, setValidationLevel] = useState<'none' | 'conversations' | 'waitlist' | 'paying_customers'>('none');
+  const [marketSizeChoice, setMarketSizeChoice] = useState<'small' | 'medium' | 'large' | 'mass_market'>('medium');
+  const [revenueModelChoice, setRevenueModelChoice] = useState<'subscription' | 'transaction_fee' | 'marketplace' | 'licensing' | 'advertising' | 'one_time' | 'other'>('subscription');
+  const [whyNow, setWhyNow] = useState('');
+  const [competitors, setCompetitors] = useState('');
+  const [moat, setMoat] = useState('');
+
+  // Step 2: About The Founder
+  const [soloFounder, setSoloFounder] = useState(true);
+  const [hasTechnicalCofounder, setHasTechnicalCofounder] = useState(false);
+  const [technicalBackground, setTechnicalBackground] = useState<'can_code' | 'used_to_code' | 'no'>('no');
+  const [currentStage, setCurrentStage] = useState<'forming' | 'ux_design' | 'prototype' | 'mvp'>('forming');
+  const [launchTimeline, setLaunchTimeline] = useState('');
+  const [fundingStatus, setFundingStatus] = useState<'bootstrapped' | 'raising' | 'raised'>('bootstrapped');
+
+  // Step 3: Contact
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
 
   const resultRef = useRef<HTMLDivElement>(null);
   const { submit, loading, error, result, reset } = useScoring();
-  const { trialCount, sessionId, canUseTrial, isReady, incrementTrialCount } = useTrialCount();
+  const { trialCount, sessionId, incrementTrialCount } = useTrialCount();
   const { user } = useAuth();
 
   const handleStart = () => {
-    setStep(0);
+    setStep(1);
     reset();
   };
 
   const handleReset = () => {
     setStep('idle');
-    setAnswers({
-      idea_text: '',
-      target_audience: '',
-      problem_solved: '',
-      revenue_model: '',
-      competitors: '',
-      founder_background: '',
-      current_stage: '',
-    });
+    setCustomer('');
+    setProblem('');
+    setPainScore(5);
+    setValidationLevel('none');
+    setMarketSizeChoice('medium');
+    setRevenueModelChoice('subscription');
+    setWhyNow('');
+    setCompetitors('');
+    setMoat('');
+    setSoloFounder(true);
+    setHasTechnicalCofounder(false);
+    setTechnicalBackground('no');
+    setCurrentStage('forming');
+    setLaunchTimeline('');
+    setFundingStatus('bootstrapped');
+    setContactName('');
+    setContactEmail('');
     reset();
   };
 
-  const handleNext = () => {
-    if (step === 'idle') return;
-    const currentQuestion = WIZARD_QUESTIONS[step];
-    const answer = answers[currentQuestion.id] || '';
-    if (answer.trim().length < currentQuestion.minLength) return;
+  const isStep1Valid = 
+    customer.trim().length >= 10 &&
+    problem.trim().length >= 10 &&
+    whyNow.trim().length >= 10 &&
+    competitors.trim().length >= 10 &&
+    moat.trim().length >= 10;
 
-    if (step === WIZARD_QUESTIONS.length - 1) {
-      handleFinalSubmit();
-    } else {
-      setStep((s) => (typeof s === 'number' ? s + 1 : 0));
+  const isStep2Valid = launchTimeline.trim().length >= 3;
+
+  const isStep3Valid = 
+    contactName.trim().length >= 2 &&
+    contactEmail.trim().match(/.+@.+\..+/);
+
+  const handleNext = () => {
+    if (step === 1 && isStep1Valid) {
+      setStep(2);
+    } else if (step === 2 && isStep2Valid) {
+      setStep(3);
     }
   };
 
   const handleBack = () => {
-    if (step === 'idle') return;
-    if (step === 0) {
+    if (step === 1) {
       setStep('idle');
-    } else {
-      setStep((s) => (typeof s === 'number' ? s - 1 : 0));
+    } else if (step === 2) {
+      setStep(1);
+    } else if (step === 3) {
+      setStep(2);
     }
   };
 
-  const handleSkipAndAnalyze = () => {
-    if (step === 'idle') return;
-    // We must have at least the main idea text filled in (step 0)
-    const ideaVal = answers['idea_text'] || '';
-    if (ideaVal.trim().length < WIZARD_QUESTIONS[0].minLength) return;
-    handleFinalSubmit();
-  };
+  const handleFinalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isStep3Valid) return;
 
-  const handleFinalSubmit = async () => {
-    const mainIdeaText = answers['idea_text'] || '';
-    const qaData = {
-      target_audience: answers['target_audience'] || '',
-      problem_solved: answers['problem_solved'] || '',
-      revenue_model: answers['revenue_model'] || '',
-      competitors: answers['competitors'] || '',
-      founder_background: answers['founder_background'] || '',
-      current_stage: answers['current_stage'] || '',
+    // Build the consolidated description from customer & problem inputs
+    const mainIdeaText = `Target Customer: ${customer}\nProblem Solved: ${problem}`;
+    const qaData: QAAnswers = {
+      customer,
+      problem,
+      pain_score: painScore,
+      validation_level: validationLevel,
+      market_size_choice: marketSizeChoice,
+      revenue_model_choice: revenueModelChoice,
+      why_now: whyNow,
+      competitors,
+      moat,
+      solo_founder: soloFounder,
+      has_technical_cofounder: soloFounder ? false : hasTechnicalCofounder,
+      technical_background: technicalBackground,
+      current_stage: currentStage,
+      launch_timeline: launchTimeline,
+      funding_status: fundingStatus,
+      contact_name: contactName,
+      contact_email: contactEmail,
     };
 
     setStep('idle'); // clear wizard view when loading/submitting
@@ -176,27 +137,12 @@ export default function ScoringWidget() {
     }, 100);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      if (step !== 'idle') {
-        const currentQuestion = WIZARD_QUESTIONS[step];
-        const answer = answers[currentQuestion.id] || '';
-        if (answer.trim().length >= currentQuestion.minLength) {
-          handleNext();
-        }
-      }
-    }
-  };
-
-  const currentQuestion = typeof step === 'number' ? WIZARD_QUESTIONS[step] : null;
-  const currentAnswer = currentQuestion ? answers[currentQuestion.id] || '' : '';
-  const isCurrentValid = currentQuestion ? currentAnswer.trim().length >= currentQuestion.minLength : false;
-  const progressPercent = typeof step === 'number' ? ((step + 1) / WIZARD_QUESTIONS.length) * 100 : 0;
+  const progressPercent = typeof step === 'number' ? (step / 3) * 100 : 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Active wizard flow */}
-      {step !== 'idle' && currentQuestion && (
+      {step !== 'idle' && typeof step === 'number' && (
         <div
           className="card"
           style={{
@@ -208,10 +154,10 @@ export default function ScoringWidget() {
           }}
         >
           {/* Progress bar */}
-          <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 28 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>
-                Step {step + 1} of {WIZARD_QUESTIONS.length} &middot; {currentQuestion.label}
+                Step {step} of 3 &middot; {step === 1 ? 'About The Idea' : step === 2 ? 'About The Founder' : 'Contact Details'}
               </span>
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)' }}>
                 {Math.round(progressPercent)}% complete
@@ -230,90 +176,478 @@ export default function ScoringWidget() {
             </div>
           </div>
 
-          {/* Question info */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <span style={{ fontSize: 22 }}>{currentQuestion.icon}</span>
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                color: 'var(--primary)',
-                background: 'var(--primary-muted)',
-                borderRadius: 999,
-                padding: '2px 10px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}
-            >
-              {currentQuestion.dimension}
-            </span>
-          </div>
+          <form onSubmit={handleFinalSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* STEP 1: ABOUT THE IDEA */}
+            {step === 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                <div>
+                  <label htmlFor="customer-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                    Who is the customer? <span style={{ color: 'var(--score-red)' }}>*</span>
+                  </label>
+                  <textarea
+                    id="customer-input"
+                    className="input"
+                    value={customer}
+                    onChange={(e) => setCustomer(e.target.value)}
+                    placeholder="e.g. Small law firms with 5–20 attorneys..."
+                    rows={2}
+                    required
+                  />
+                  {customer.trim().length > 0 && customer.trim().length < 10 && (
+                    <span style={{ fontSize: 11, color: 'var(--score-red)' }}>Needs at least 10 characters (current: {customer.trim().length})</span>
+                  )}
+                </div>
 
-          <label
-            htmlFor={`wizard-qa-${currentQuestion.id}`}
-            style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: 12 }}
-          >
-            {currentQuestion.question}
-          </label>
+                <div>
+                  <label htmlFor="problem-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                    What problem does it solve? <span style={{ color: 'var(--score-red)' }}>*</span>
+                  </label>
+                  <textarea
+                    id="problem-input"
+                    className="input"
+                    value={problem}
+                    onChange={(e) => setProblem(e.target.value)}
+                    placeholder="e.g. Legal teams spend 40% of their time on repetitive manual research..."
+                    rows={2}
+                    required
+                  />
+                  {problem.trim().length > 0 && problem.trim().length < 10 && (
+                    <span style={{ fontSize: 11, color: 'var(--score-red)' }}>Needs at least 10 characters (current: {problem.trim().length})</span>
+                  )}
+                </div>
 
-          <textarea
-            id={`wizard-qa-${currentQuestion.id}`}
-            className="input"
-            value={currentAnswer}
-            onChange={(e) => setAnswers({ ...answers, [currentQuestion.id]: e.target.value })}
-            onKeyDown={handleKeyDown}
-            placeholder={currentQuestion.placeholder}
-            rows={4}
-            autoFocus
-            style={{
-              resize: 'vertical',
-              minHeight: 100,
-              fontFamily: 'inherit',
-              border: `1.5px solid ${isCurrentValid ? 'var(--primary)' : 'var(--border-strong)'}`,
-            }}
-          />
+                <div>
+                  <label style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                    Pain Score (1-10): <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{painScore}</span>
+                  </label>
+                  <div style={{ display: 'flex', gap: 6, margin: '8px 0' }}>
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((val) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setPainScore(val)}
+                        style={{
+                          flex: 1,
+                          height: 38,
+                          borderRadius: 'var(--radius-sm)',
+                          border: `1.5px solid ${painScore === val ? 'var(--primary)' : 'var(--border-strong)'}`,
+                          background: painScore === val ? 'var(--primary)' : '#fff',
+                          color: painScore === val ? '#fff' : 'var(--text-primary)',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {val}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              {isCurrentValid ? '✓ Meets minimum length' : `Min ${currentQuestion.minLength} characters`}
-            </span>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-              Cmd+Enter to continue
-            </span>
-          </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+                  <div>
+                    <label style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                      Validation Level
+                    </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {[
+                        { key: 'none', label: 'None (Just an idea)' },
+                        { key: 'conversations', label: 'Conversations with Users' },
+                        { key: 'waitlist', label: 'Waitlist / Signups' },
+                        { key: 'paying_customers', label: 'Paying Customers' },
+                      ].map((item) => (
+                        <label key={item.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="validationLevel"
+                            checked={validationLevel === item.key}
+                            onChange={() => setValidationLevel(item.key as any)}
+                            style={{ accentColor: 'var(--primary)' }}
+                          />
+                          {item.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
 
-          {/* Navigation Controls */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, gap: 12 }}>
-            <button className="btn btn-secondary" onClick={handleBack}>
-              &larr; Back
-            </button>
+                  <div>
+                    <label style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                      Market Size
+                    </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {[
+                        { key: 'small', label: 'Small / Niche Market' },
+                        { key: 'medium', label: 'Medium-Sized Market' },
+                        { key: 'large', label: 'Large Market' },
+                        { key: 'mass_market', label: 'Mass Market' },
+                      ].map((item) => (
+                        <label key={item.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="marketSizeChoice"
+                            checked={marketSizeChoice === item.key}
+                            onChange={() => setMarketSizeChoice(item.key as any)}
+                            style={{ accentColor: 'var(--primary)' }}
+                          />
+                          {item.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
-            <div style={{ display: 'flex', gap: 12 }}>
-              {step > 0 && (
+                <div>
+                  <label htmlFor="revenue-model-select" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                    Revenue Model
+                  </label>
+                  <select
+                    id="revenue-model-select"
+                    className="input"
+                    value={revenueModelChoice}
+                    onChange={(e) => setRevenueModelChoice(e.target.value as any)}
+                    style={{ height: 46, padding: '0 12px' }}
+                  >
+                    <option value="subscription">Subscription / SaaS</option>
+                    <option value="transaction_fee">Transaction Fee / Commission</option>
+                    <option value="marketplace">Marketplace Take-Rate</option>
+                    <option value="licensing">Enterprise Licensing</option>
+                    <option value="advertising">Advertising / Sponsorship</option>
+                    <option value="one_time">One-Time Purchase</option>
+                    <option value="other">Other / Multi-modal</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="why-now-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                    Why is this the right time (Why Now)? <span style={{ color: 'var(--score-red)' }}>*</span>
+                  </label>
+                  <textarea
+                    id="why-now-input"
+                    className="input"
+                    value={whyNow}
+                    onChange={(e) => setWhyNow(e.target.value)}
+                    placeholder="e.g. Recent advancements in LLM reasoning accuracy make vertical SaaS feasible..."
+                    rows={2}
+                    required
+                  />
+                  {whyNow.trim().length > 0 && whyNow.trim().length < 10 && (
+                    <span style={{ fontSize: 11, color: 'var(--score-red)' }}>Needs at least 10 characters</span>
+                  )}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+                  <div>
+                    <label htmlFor="competitors-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                      Competitors <span style={{ color: 'var(--score-red)' }}>*</span>
+                    </label>
+                    <textarea
+                      id="competitors-input"
+                      className="input"
+                      value={competitors}
+                      onChange={(e) => setCompetitors(e.target.value)}
+                      placeholder="e.g. Incumbents like Westlaw and Casetext; new niche startups..."
+                      rows={2}
+                      required
+                    />
+                    {competitors.trim().length > 0 && competitors.trim().length < 10 && (
+                      <span style={{ fontSize: 11, color: 'var(--score-red)' }}>Needs at least 10 characters</span>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="moat-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                      Moat / Differentiation <span style={{ color: 'var(--score-red)' }}>*</span>
+                    </label>
+                    <textarea
+                      id="moat-input"
+                      className="input"
+                      value={moat}
+                      onChange={(e) => setMoat(e.target.value)}
+                      placeholder="e.g. Proprietary fine-tuned citation verification model; deep workflow integrations..."
+                      rows={2}
+                      required
+                    />
+                    {moat.trim().length > 0 && moat.trim().length < 10 && (
+                      <span style={{ fontSize: 11, color: 'var(--score-red)' }}>Needs at least 10 characters</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2: ABOUT THE FOUNDER */}
+            {step === 2 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                <div>
+                  <label style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                    Are you a solo founder?
+                  </label>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <button
+                      type="button"
+                      onClick={() => setSoloFounder(true)}
+                      style={{
+                        flex: 1,
+                        padding: '12px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: `1.5px solid ${soloFounder ? 'var(--primary)' : 'var(--border-strong)'}`,
+                        background: soloFounder ? 'var(--primary-muted)' : '#fff',
+                        color: 'var(--text-primary)',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      👤 Solo Founder
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSoloFounder(false)}
+                      style={{
+                        flex: 1,
+                        padding: '12px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: `1.5px solid ${!soloFounder ? 'var(--primary)' : 'var(--border-strong)'}`,
+                        background: !soloFounder ? 'var(--primary-muted)' : '#fff',
+                        color: 'var(--text-primary)',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      👥 Co-founders / Team
+                    </button>
+                  </div>
+                </div>
+
+                {!soloFounder && (
+                  <div style={{ animation: 'fadeIn 0.2s ease' }}>
+                    <label style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                      Is there a technical co-founder?
+                    </label>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <button
+                        type="button"
+                        onClick={() => setHasTechnicalCofounder(true)}
+                        style={{
+                          flex: 1,
+                          padding: '10px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: `1.5px solid ${hasTechnicalCofounder ? 'var(--primary)' : 'var(--border-strong)'}`,
+                          background: hasTechnicalCofounder ? 'var(--primary-muted)' : '#fff',
+                          color: 'var(--text-primary)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        💻 Yes, they can code
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHasTechnicalCofounder(false)}
+                        style={{
+                          flex: 1,
+                          padding: '10px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: `1.5px solid ${!hasTechnicalCofounder ? 'var(--primary)' : 'var(--border-strong)'}`,
+                          background: !hasTechnicalCofounder ? 'var(--primary-muted)' : '#fff',
+                          color: 'var(--text-primary)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        🚫 No tech co-founder
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                    What is your technical background?
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+                    {[
+                      { key: 'can_code', label: '💻 I can code' },
+                      { key: 'used_to_code', label: '⏳ I used to code' },
+                      { key: 'no', label: '🚫 Non-technical' },
+                    ].map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setTechnicalBackground(item.key as any)}
+                        style={{
+                          padding: '10px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: `1.5px solid ${technicalBackground === item.key ? 'var(--primary)' : 'var(--border-strong)'}`,
+                          background: technicalBackground === item.key ? 'var(--primary-muted)' : '#fff',
+                          color: 'var(--text-primary)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                    Current Stage
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+                    {[
+                      { key: 'forming', label: ' Forming / Idea' },
+                      { key: 'ux_design', label: '🎨 UX Design' },
+                      { key: 'prototype', label: '⚙️ Prototype' },
+                      { key: 'mvp', label: '🚀 Live MVP' },
+                    ].map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setCurrentStage(item.key as any)}
+                        style={{
+                          padding: '10px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: `1.5px solid ${currentStage === item.key ? 'var(--primary)' : 'var(--border-strong)'}`,
+                          background: currentStage === item.key ? 'var(--primary-muted)' : '#fff',
+                          color: 'var(--text-primary)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="launch-timeline-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                    Launch Timeline <span style={{ color: 'var(--score-red)' }}>*</span>
+                  </label>
+                  <input
+                    id="launch-timeline-input"
+                    type="text"
+                    className="input"
+                    value={launchTimeline}
+                    onChange={(e) => setLaunchTimeline(e.target.value)}
+                    placeholder="e.g. 3 months, or launched 2 weeks ago..."
+                    required
+                  />
+                  {launchTimeline.trim().length > 0 && launchTimeline.trim().length < 3 && (
+                    <span style={{ fontSize: 11, color: 'var(--score-red)' }}>Needs at least 3 characters</span>
+                  )}
+                </div>
+
+                <div>
+                  <label style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                    Funding Status
+                  </label>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    {[
+                      { key: 'bootstrapped', label: '🌱 Bootstrapped' },
+                      { key: 'raising', label: '📈 Raising Seed' },
+                      { key: 'raised', label: '💰 Funded' },
+                    ].map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setFundingStatus(item.key as any)}
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: `1.5px solid ${fundingStatus === item.key ? 'var(--primary)' : 'var(--border-strong)'}`,
+                          background: fundingStatus === item.key ? 'var(--primary-muted)' : '#fff',
+                          color: 'var(--text-primary)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3: CONTACT INFORMATION */}
+            {step === 3 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                <div>
+                  <label htmlFor="contact-name-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                    Your Name <span style={{ color: 'var(--score-red)' }}>*</span>
+                  </label>
+                  <input
+                    id="contact-name-input"
+                    type="text"
+                    className="input"
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    placeholder="e.g. John Doe"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="contact-email-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                    Email Address <span style={{ color: 'var(--score-red)' }}>*</span>
+                  </label>
+                  <input
+                    id="contact-email-input"
+                    type="email"
+                    className="input"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    placeholder="e.g. john@example.com"
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Navigation buttons */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24, gap: 12 }}>
+              <button type="button" className="btn btn-secondary" onClick={handleBack}>
+                &larr; Back
+              </button>
+
+              {step < 3 ? (
                 <button
-                  className="btn btn-ghost"
-                  onClick={handleSkipAndAnalyze}
-                  style={{ color: 'var(--text-secondary)' }}
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleNext}
+                  disabled={step === 1 ? !isStep1Valid : !isStep2Valid}
+                  style={{
+                    backgroundImage: (step === 1 ? isStep1Valid : isStep2Valid)
+                      ? 'linear-gradient(135deg, #2E5C8A 0%, #4A80B5 50%, #2E5C8A 100%)'
+                      : 'none',
+                    backgroundSize: '200% 100%',
+                  }}
                 >
-                  Skip & Analyze
+                  Next &rarr;
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={!isStep3Valid}
+                  style={{
+                    backgroundImage: isStep3Valid
+                      ? 'linear-gradient(135deg, #2E5C8A 0%, #4A80B5 50%, #2E5C8A 100%)'
+                      : 'none',
+                    backgroundSize: '200% 100%',
+                    minWidth: 200,
+                  }}
+                >
+                  ⚡ Validate My Idea
                 </button>
               )}
-
-              <button
-                className="btn btn-primary"
-                onClick={handleNext}
-                disabled={!isCurrentValid}
-                style={{
-                  backgroundImage: !isCurrentValid
-                    ? 'none'
-                    : 'linear-gradient(135deg, #2E5C8A 0%, #4A80B5 50%, #2E5C8A 100%)',
-                  backgroundSize: '200% 100%',
-                }}
-              >
-                {step === WIZARD_QUESTIONS.length - 1 ? '⚡ Analyze My Idea' : 'Next →'}
-              </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
 
@@ -420,14 +754,20 @@ export default function ScoringWidget() {
 
           <ScoreCard
             overallScore={result.overall_score}
+            startupQualityScore={result.startup_quality_score}
+            investorReadinessScore={result.investor_readiness_score}
             triageBand={result.triage_band as TriageBand}
-            ideaText={answers['idea_text'] || ''}
+            ideaText={customer && problem ? `For ${customer}, solving: ${problem}` : ''}
             startupSummary={result.startup_summary}
-            keyStrengths={result.key_strengths}
-            topRisks={result.top_risks}
+            whyThisScore={result.why_this_score}
+            biggestAssumption={result.biggest_assumption}
+            missingEvidence={result.missing_evidence}
+            whatIncreasedTheScore={result.what_increased_the_score}
+            whatReducedTheScore={result.what_reduced_the_score}
+            howToImprove={result.how_to_improve}
+            investorQuestions={result.investor_questions}
             highestScoringDimension={result.highest_scoring_dimension}
             lowestScoringDimension={result.lowest_scoring_dimension}
-            mostImportantNextAction={result.most_important_next_action}
           />
 
           <DimensionList dimensions={result.dimensions} unlocked={true} />
