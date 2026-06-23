@@ -245,6 +245,7 @@ export function generateMockResponse(ideaText: string): ScoringResponse {
 
   const confidenceLevel = clamp(base.confidence_level + scoreShift * 2);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return {
     ...base,
     overall_score:            overall,
@@ -261,5 +262,57 @@ export function generateMockResponse(ideaText: string): ScoringResponse {
       competitive_moat:      { ...dims.competitive_moat,      score: cm,  confidence: clamp(dims.competitive_moat.confidence + scoreShift * 2) },
       founder_market_fit:    { ...dims.founder_market_fit,    score: fmf, confidence: clamp(dims.founder_market_fit.confidence + scoreShift * 2) },
     },
-  };
+    // New extended narrative fields (mock values for local dev)
+    biggest_risk: {
+      title: 'Competitive Encroachment by Incumbents',
+      explanation: 'Well-funded incumbents like Harvey AI ($100M+) and Thomson Reuters (Casetext acquisition) are aggressively targeting this exact segment. Without proprietary data or network effects, the core product risks being replicated as a feature within 12-18 months.',
+      severity: 'high' as const,
+    },
+    critical_assumptions: [
+      { assumption: 'Small law firms will trust AI-generated briefs without mandatory legal review.', why_critical: 'If attorneys require human review of every output, the time savings disappear and the value proposition collapses.' },
+      { assumption: 'The addressable market of tech-forward small law firms is large enough to sustain growth.', why_critical: 'Only 15-20% of small law firms currently adopt new legal tech. If the early adopter segment is too small, growth stalls before product-market fit is proven.' },
+      { assumption: 'Citation accuracy can reach the legal-grade threshold (>99.5%) required for professional use.', why_critical: 'Any material hallucination rate creates professional liability exposure that will kill enterprise adoption.' },
+      { assumption: 'Customer acquisition cost stays below $500 when selling to boutique law firms.', why_critical: 'Legal tech SMB sales cycles are long (3-6 months). High CAC with slow payback destroys unit economics at scale.' },
+    ],
+    investor_red_flags: [
+      { flag: 'No Customer Validation', severity: 'high' as const, explanation: 'No conversations, waitlist signups, or paying customers have been reported. Investors require evidence of demand before committing capital.', fix: 'Conduct 20+ structured customer discovery interviews with practicing attorneys in the next 30 days.' },
+      { flag: 'Crowded Competitive Market', severity: 'high' as const, explanation: 'Harvey AI, Casetext, LexisNexis AI, and Westlaw AI are all targeting legal AI. Without clear differentiation, investor interest is limited.', fix: 'Define and dominate a specific practice area niche (e.g. immigration law) before expanding.' },
+      { flag: 'Weak Moat', severity: 'medium' as const, explanation: 'No proprietary data, network effects, or deep workflow integrations are in place. The product is easily replicated once incumbents decide to build it.', fix: 'Build deep integrations with Clio or MyCase to create switching costs through workflow dependency.' },
+    ],
+    fastest_improvements: [
+      { action: 'Get First Paying Customer', score_gain: '+3.0 pts', difficulty: 'Hard' as const, time_required: '4-8 weeks' },
+      { action: 'Build a Waitlist of 50+ Law Firms', score_gain: '+1.5 pts', difficulty: 'Medium' as const, time_required: '2-4 weeks' },
+      { action: 'Recruit Attorney Co-founder or Legal Advisor', score_gain: '+1.0 pts', difficulty: 'Hard' as const, time_required: '4-12 weeks' },
+    ],
+    comparable_startups: [
+      { name: 'Harvey AI', reason: 'Direct AI legal research competitor targeting law firms with GPT-4 based document drafting and case research tools.' },
+      { name: 'Casetext (acquired by Thomson Reuters)', reason: 'Legal AI research platform for law firms — proven that the market exists and acquires for premium valuations.' },
+      { name: 'Ironclad', reason: 'Legal workflow automation SaaS with B2B subscription model targeting legal teams — demonstrates the enterprise legal SaaS playbook.' },
+      { name: 'Luminance', reason: 'AI-powered legal document review tool for law firms — comparable vertical B2B SaaS with compliance-grade AI requirements.' },
+    ],
+    due_diligence_questions: {
+      market: ['What is the total addressable market of tech-forward small law firms (under 20 attorneys) willing to pay $300+/month?', 'How does the AI disclosure landscape in courts evolve and what is your regulatory risk scenario?'],
+      product: ['How do you handle citation hallucination and what is your target accuracy rate?', 'What is the core workflow you solve — research, drafting, or review — and why that one first?'],
+      competition: ['Why won\'t Westlaw or Clio bundle AI research and make your product redundant?', 'What is your specific technical differentiation from Harvey AI or Casetext?'],
+      revenue: ['What is your estimated CAC and LTV for a 10-attorney law firm?', 'What is the expected payback period given the long legal sales cycle?'],
+      team: ['Does anyone on the founding team have a JD or prior legal industry experience?', 'Who will lead customer discovery and sales — and do they have legal credibility?'],
+      execution: ['What is the minimum viable feature set to acquire the first 10 paying customers?', 'What are your key technical milestones in the next 6 months?'],
+    },
+    startup_roadmap: {
+      current_stage: 'Idea / Forming',
+      milestones: [
+        { title: 'Customer Discovery', timeline: 'Month 1-2', actions: ['Interview 25 practicing attorneys', 'Map the exact research workflow and identify biggest time sink', 'Validate willingness to pay at $200-400/month'], success_criteria: '15+ attorneys confirm the pain and 5+ express strong purchase intent' },
+        { title: 'Build MVP', timeline: 'Month 2-4', actions: ['Build minimal RAG pipeline over CourtListener data', 'Implement citation verification as a core feature', 'Create a simple web UI for case research queries'], success_criteria: 'Working demo that can answer 80%+ of test legal research queries with accurate citations' },
+        { title: 'First Paying Customers', timeline: 'Month 4-6', actions: ['Onboard 5 beta customers at $100-200/month', 'Collect usage data and refine product based on attorney feedback', 'Build case study with quantified time savings'], success_criteria: '5 paying customers and NPS > 40 from beta cohort' },
+        { title: 'Seed Fundraising', timeline: 'Month 6-9', actions: ['Compile investor deck with unit economics from beta', 'Target 20 seed funds focused on legal tech and enterprise SaaS', 'Secure attorney advisor with bar credibility for investor meetings'], success_criteria: '$500K-$1.5M seed round closed at competitive valuation' },
+      ],
+    },
+    investment_probability: 42,
+    investment_probability_band: 'Needs Validation',
+    investment_probability_explanation: 'There is a clear idea but insufficient evidence to excite investors. Prioritize customer conversations and early revenue signals.',
+    evidence_score: 0,
+    evidence_score_band: 'Idea Only',
+    founder_readiness_score: 5,
+    founder_readiness_band: 'Developing',
+  } as any;
 }

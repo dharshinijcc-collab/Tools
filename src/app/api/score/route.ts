@@ -394,10 +394,10 @@ export async function POST(req: NextRequest) {
       unlocked,
       free_reports_used: unlocked && !userId ? trial_count + 1 : freeReportsUsed,
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('[POST /api/score]', err);
     return NextResponse.json(
-      { error: 'Something went wrong. Please try again.' },
+      { error: `Server Error: ${err?.message || String(err)}` },
       { status: 500 },
     );
   }

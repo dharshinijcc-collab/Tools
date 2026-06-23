@@ -212,11 +212,11 @@ function computeDimensionScore(
 
   const positiveSignals = activeFired
     .filter((f) => f.points > 0)
-    .map((f) => `${f.label} (+${f.points})`);
+    .map((f) => f.label);
 
   const negativeSignals = activeFired
     .filter((f) => f.points < 0)
-    .map((f) => `${f.label} (${f.points})`);
+    .map((f) => f.label);
 
   // Confidence = proportion of signals that are NOT "unknown"
   const confidence = computeSignalConfidence(dimensionKey, signals);

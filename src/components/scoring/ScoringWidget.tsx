@@ -496,7 +496,7 @@ export default function ScoringWidget() {
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
                     {[
-                      { key: 'forming', label: ' Forming / Idea' },
+                      { key: 'forming', label: '💡 Forming / Idea' },
                       { key: 'ux_design', label: '🎨 UX Design' },
                       { key: 'prototype', label: '⚙️ Prototype' },
                       { key: 'mvp', label: '🚀 Live MVP' },
@@ -569,88 +569,62 @@ export default function ScoringWidget() {
                     ))}
                   </div>
                 </div>
-              </div>
-            )}
 
-              {/* Contact fields at the bottom of Step 2 */}
-              {step === 2 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 4 }}>
-                  {/* Divider with label */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0' }}>
-                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
-                      Your Contact Info
-                    </span>
-                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-                  </div>
-
-                  {/* Disclaimer note */}
-                  <div style={{
-                    background: 'rgba(46,92,138,0.06)',
-                    border: '1px solid rgba(46,92,138,0.15)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '10px 14px',
-                    fontSize: 12,
-                    color: 'var(--text-secondary)',
-                    lineHeight: 1.55,
-                  }}>
-                    ℹ️ <strong>Note:</strong> Your name and email are collected so we can follow up with you — they do <strong>not</strong> factor into the evaluation of your idea.
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-                    <div>
-                      <label htmlFor="contact-name-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
-                        Your Name <span style={{ color: 'var(--score-red)' }}>*</span>
-                      </label>
-                      <input
-                        id="contact-name-input"
-                        type="text"
-                        className="input"
-                        value={contactName}
-                        onChange={(e) => setContactName(e.target.value)}
-                        placeholder="e.g. Jane Doe"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="contact-email-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
-                        Email Address <span style={{ color: 'var(--score-red)' }}>*</span>
-                      </label>
-                      <input
-                        id="contact-email-input"
-                        type="email"
-                        className="input"
-                        value={contactEmail}
-                        onChange={(e) => setContactEmail(e.target.value)}
-                        placeholder="e.g. jane@example.com"
-                        required
-                      />
-                      {contactEmail.trim().length > 0 && !contactEmail.trim().match(/.+@.+\..+/) && (
-                        <span style={{ fontSize: 11, color: 'var(--score-red)' }}>Please enter a valid email</span>
-                      )}
-                    </div>
+                {/* Contact fields — part of Step 2, after founder questions */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+                  <div>
+                    <label htmlFor="contact-name-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                      Your Name <span style={{ color: 'var(--score-red)' }}>*</span>
+                    </label>
+                    <input
+                      id="contact-name-input"
+                      type="text"
+                      className="input"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      placeholder="e.g. Jane Doe"
+                      required
+                    />
                   </div>
 
                   <div>
-                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
-                      <input
-                        id="need-help-checkbox"
-                        type="checkbox"
-                        checked={needHelp}
-                        onChange={(e) => setNeedHelp(e.target.checked)}
-                        style={{ accentColor: 'var(--primary)', marginTop: 2, width: 16, height: 16, flexShrink: 0 }}
-                      />
-                      <span style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                        <strong>Do you need help from CrestCode?</strong>
-                        <span style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-                          Check this if you&apos;d like our team to reach out about building your product. This does not affect your idea&apos;s score.
-                        </span>
-                      </span>
+                    <label htmlFor="contact-email-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                      Email Address <span style={{ color: 'var(--score-red)' }}>*</span>
                     </label>
+                    <input
+                      id="contact-email-input"
+                      type="email"
+                      className="input"
+                      value={contactEmail}
+                      onChange={(e) => setContactEmail(e.target.value)}
+                      placeholder="e.g. jane@example.com"
+                      required
+                    />
+                    {contactEmail.trim().length > 0 && !contactEmail.trim().match(/.+@.+\..+/) && (
+                      <span style={{ fontSize: 11, color: 'var(--score-red)' }}>Please enter a valid email</span>
+                    )}
                   </div>
                 </div>
-              )}
+
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+                    <input
+                      id="need-help-checkbox"
+                      type="checkbox"
+                      checked={needHelp}
+                      onChange={(e) => setNeedHelp(e.target.checked)}
+                      style={{ accentColor: 'var(--primary)', marginTop: 3, width: 16, height: 16, flexShrink: 0 }}
+                    />
+                    <span style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                      Do you need help from CrestCode?
+                      <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 2 }}>
+                        Your answer here does not go into the evaluation of your idea.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            )}
 
             {/* Navigation buttons */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24, gap: 12 }}>
