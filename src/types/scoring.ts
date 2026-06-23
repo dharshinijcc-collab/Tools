@@ -278,7 +278,8 @@ export interface QAAnswers {
   launch_timeline: string;
   funding_status: 'bootstrapped' | 'raising' | 'raised';
 
-  // Contact
+  // Contact (not used in scoring)
   contact_name: string;
   contact_email: string;
+  need_help?: boolean;
 }

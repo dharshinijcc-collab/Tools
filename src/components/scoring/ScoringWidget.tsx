@@ -24,17 +24,16 @@ export default function ScoringWidget() {
   const [competitors, setCompetitors] = useState('');
   const [moat, setMoat] = useState('');
 
-  // Step 2: About The Founder
+  // Step 2: About The Founder + Contact
   const [soloFounder, setSoloFounder] = useState(true);
   const [hasTechnicalCofounder, setHasTechnicalCofounder] = useState(false);
   const [technicalBackground, setTechnicalBackground] = useState<'can_code' | 'used_to_code' | 'no'>('no');
   const [currentStage, setCurrentStage] = useState<'forming' | 'ux_design' | 'prototype' | 'mvp'>('forming');
   const [launchTimeline, setLaunchTimeline] = useState('');
   const [fundingStatus, setFundingStatus] = useState<'bootstrapped' | 'raising' | 'raised'>('bootstrapped');
-
-  // Step 3: Contact
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
+  const [needHelp, setNeedHelp] = useState(false);
 
   const resultRef = useRef<HTMLDivElement>(null);
   const { submit, loading, error, result, reset } = useScoring();
@@ -65,6 +64,7 @@ export default function ScoringWidget() {
     setFundingStatus('bootstrapped');
     setContactName('');
     setContactEmail('');
+    setNeedHelp(false);
     reset();
   };
 
@@ -75,17 +75,14 @@ export default function ScoringWidget() {
     competitors.trim().length >= 10 &&
     moat.trim().length >= 10;
 
-  const isStep2Valid = launchTimeline.trim().length >= 3;
-
-  const isStep3Valid = 
+  const isStep2Valid =
+    launchTimeline.trim().length >= 3 &&
     contactName.trim().length >= 2 &&
-    contactEmail.trim().match(/.+@.+\..+/);
+    !!contactEmail.trim().match(/.+@.+\..+/);
 
   const handleNext = () => {
     if (step === 1 && isStep1Valid) {
       setStep(2);
-    } else if (step === 2 && isStep2Valid) {
-      setStep(3);
     }
   };
 
@@ -101,7 +98,7 @@ export default function ScoringWidget() {
 
   const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isStep3Valid) return;
+    if (!isStep2Valid) return;
 
     // Build the consolidated description from customer & problem inputs
     const mainIdeaText = `Target Customer: ${customer}\nProblem Solved: ${problem}`;
@@ -123,6 +120,7 @@ export default function ScoringWidget() {
       funding_status: fundingStatus,
       contact_name: contactName,
       contact_email: contactEmail,
+      need_help: needHelp,
     };
 
     setStep('idle'); // clear wizard view when loading/submitting
@@ -137,7 +135,7 @@ export default function ScoringWidget() {
     }, 100);
   };
 
-  const progressPercent = typeof step === 'number' ? (step / 3) * 100 : 0;
+  const progressPercent = typeof step === 'number' ? (step / 2) * 100 : 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -157,7 +155,7 @@ export default function ScoringWidget() {
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>
-                Step {step} of 3 &middot; {step === 1 ? 'About The Idea' : step === 2 ? 'About The Founder' : 'Contact Details'}
+                Step {step} of 2 &middot; {step === 1 ? 'About The Idea' : 'About The Founder'}
               </span>
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)' }}>
                 {Math.round(progressPercent)}% complete
@@ -574,40 +572,85 @@ export default function ScoringWidget() {
               </div>
             )}
 
-            {/* STEP 3: CONTACT INFORMATION */}
-            {step === 3 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                <div>
-                  <label htmlFor="contact-name-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
-                    Your Name <span style={{ color: 'var(--score-red)' }}>*</span>
-                  </label>
-                  <input
-                    id="contact-name-input"
-                    type="text"
-                    className="input"
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                    placeholder="e.g. John Doe"
-                    required
-                  />
-                </div>
+              {/* Contact fields at the bottom of Step 2 */}
+              {step === 2 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 4 }}>
+                  {/* Divider with label */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0' }}>
+                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+                      Your Contact Info
+                    </span>
+                    <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                  </div>
 
-                <div>
-                  <label htmlFor="contact-email-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
-                    Email Address <span style={{ color: 'var(--score-red)' }}>*</span>
-                  </label>
-                  <input
-                    id="contact-email-input"
-                    type="email"
-                    className="input"
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                    placeholder="e.g. john@example.com"
-                    required
-                  />
+                  {/* Disclaimer note */}
+                  <div style={{
+                    background: 'rgba(46,92,138,0.06)',
+                    border: '1px solid rgba(46,92,138,0.15)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '10px 14px',
+                    fontSize: 12,
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.55,
+                  }}>
+                    ℹ️ <strong>Note:</strong> Your name and email are collected so we can follow up with you — they do <strong>not</strong> factor into the evaluation of your idea.
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+                    <div>
+                      <label htmlFor="contact-name-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                        Your Name <span style={{ color: 'var(--score-red)' }}>*</span>
+                      </label>
+                      <input
+                        id="contact-name-input"
+                        type="text"
+                        className="input"
+                        value={contactName}
+                        onChange={(e) => setContactName(e.target.value)}
+                        placeholder="e.g. Jane Doe"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="contact-email-input" style={{ fontSize: 14, fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                        Email Address <span style={{ color: 'var(--score-red)' }}>*</span>
+                      </label>
+                      <input
+                        id="contact-email-input"
+                        type="email"
+                        className="input"
+                        value={contactEmail}
+                        onChange={(e) => setContactEmail(e.target.value)}
+                        placeholder="e.g. jane@example.com"
+                        required
+                      />
+                      {contactEmail.trim().length > 0 && !contactEmail.trim().match(/.+@.+\..+/) && (
+                        <span style={{ fontSize: 11, color: 'var(--score-red)' }}>Please enter a valid email</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+                      <input
+                        id="need-help-checkbox"
+                        type="checkbox"
+                        checked={needHelp}
+                        onChange={(e) => setNeedHelp(e.target.checked)}
+                        style={{ accentColor: 'var(--primary)', marginTop: 2, width: 16, height: 16, flexShrink: 0 }}
+                      />
+                      <span style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                        <strong>Do you need help from CrestCode?</strong>
+                        <span style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                          Check this if you&apos;d like our team to reach out about building your product. This does not affect your idea&apos;s score.
+                        </span>
+                      </span>
+                    </label>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Navigation buttons */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24, gap: 12 }}>
@@ -615,14 +658,14 @@ export default function ScoringWidget() {
                 &larr; Back
               </button>
 
-              {step < 3 ? (
+              {step < 2 ? (
                 <button
                   type="button"
                   className="btn btn-primary"
                   onClick={handleNext}
-                  disabled={step === 1 ? !isStep1Valid : !isStep2Valid}
+                  disabled={!isStep1Valid}
                   style={{
-                    backgroundImage: (step === 1 ? isStep1Valid : isStep2Valid)
+                    backgroundImage: isStep1Valid
                       ? 'linear-gradient(135deg, #2E5C8A 0%, #4A80B5 50%, #2E5C8A 100%)'
                       : 'none',
                     backgroundSize: '200% 100%',
@@ -634,9 +677,9 @@ export default function ScoringWidget() {
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={!isStep3Valid}
+                  disabled={!isStep2Valid}
                   style={{
-                    backgroundImage: isStep3Valid
+                    backgroundImage: isStep2Valid
                       ? 'linear-gradient(135deg, #2E5C8A 0%, #4A80B5 50%, #2E5C8A 100%)'
                       : 'none',
                     backgroundSize: '200% 100%',

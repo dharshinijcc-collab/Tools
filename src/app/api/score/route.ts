@@ -33,6 +33,7 @@ const QAAnswersSchema = z.object({
   funding_status: z.enum(['bootstrapped', 'raising', 'raised']).optional(),
   contact_name: z.string().optional(),
   contact_email: z.string().optional(),
+  need_help: z.boolean().optional(),
 }).optional();
 
 const RequestSchema = z.object({
@@ -353,7 +354,7 @@ export async function POST(req: NextRequest) {
         overall_score: overallScore,
         triage_band: triageBand,
         unlocked,
-        need_help: false,
+        need_help: qa_answers?.need_help ?? false,
         ...trainingData,
       });
 
